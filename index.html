@@ -34,29 +34,44 @@
             transform: scale(1.02);
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
         }
+        
+        /* 圖片產生容器調整為自動多欄橫向延伸 */
         #share-card {
             position: fixed;
             left: -100000px;
             top: 0;
-            width: 600px;
+            width: max-content;
             pointer-events: none;
         }
         .share-card-inner {
-            width: 600px;
-            padding: 24px 28px;
+            display: flex;
+            flex-direction: row;
+            gap: 20px;
+            padding: 28px;
             background: #111111;
             color: #d1d5db;
             font-family: "Microsoft JhengHei", sans-serif;
         }
+        /* 每一團 (週幾) 獨立成為一欄 */
+        .share-group-column {
+            width: 380px;
+            background: #18181b;
+            border: 1px solid #27272a;
+            border-radius: 12px;
+            padding: 20px;
+            flex-shrink: 0;
+        }
         .share-group-header-text {
-            font-size: 26px;
+            font-size: 22px;
             font-weight: 700;
             color: #f3f4f6;
             margin-bottom: 12px;
             letter-spacing: 0.5px;
+            border-bottom: 2px solid #3b82f6;
+            padding-bottom: 8px;
         }
         .share-team-title-text {
-            font-size: 21px;
+            font-size: 17px;
             font-weight: 700;
             color: #93c5fd;
             margin-top: 14px;
@@ -65,22 +80,22 @@
         .share-row-item {
             display: flex;
             align-items: center;
-            font-size: 16px;
-            line-height: 1.55;
+            font-size: 15px;
+            line-height: 1.5;
             color: #e5e7eb;
             margin-bottom: 4px;
         }
         .share-col-level {
-            width: 80px;
+            width: 60px;
             text-align: right;
-            margin-right: 16px;
+            margin-right: 12px;
             color: #93c5fd;
             font-weight: 600;
             flex-shrink: 0;
         }
         .share-col-job {
-            width: 120px;
-            margin-right: 16px;
+            width: 100px;
+            margin-right: 12px;
             flex-shrink: 0;
         }
         .share-col-name {
@@ -154,13 +169,13 @@
     <div id="share-card"></div>
 
     <div id="image-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-        <div class="relative flex max-h-[90vh] w-full max-w-4xl flex-col rounded-xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
+        <div class="relative flex max-h-[90vh] w-full max-w-5xl flex-col rounded-xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
             <div class="mb-4 flex items-center justify-between border-b border-slate-800 pb-3">
                 <h3 id="modal-title" class="text-lg font-bold text-slate-100">團隊圖片預覽</h3>
                 <button onclick="closeModal()" class="rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-white">✕</button>
             </div>
             <div class="relative flex flex-1 items-center justify-center overflow-auto rounded-lg bg-slate-950 p-2">
-                <img id="modal-img" class="max-h-[60vh] rounded object-contain shadow-lg" src="" alt="團隊圖片預覽">
+                <img id="modal-img" class="max-h-[65vh] rounded object-contain shadow-lg" src="" alt="團隊圖片預覽">
             </div>
             <div class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 pt-4">
                 <div class="flex items-center gap-2">
@@ -1211,7 +1226,7 @@
 
         function formatShareHeader() {
             return `
-                <div class="share-row-item" style="border-bottom: 1px solid #334155; padding-bottom: 6px; margin-bottom: 8px; font-weight: 700; color: #94a3b8;">
+                <div class="share-row-item" style="border-bottom: 1px solid #334155; padding-bottom: 4px; margin-bottom: 6px; font-weight: 700; color: #94a3b8; font-size: 13px;">
                     <div class="share-col-level">等級</div>
                     <div class="share-col-job">職業</div>
                     <div class="share-col-name">名字</div>
@@ -1235,74 +1250,78 @@
             if (typeof html2canvas === "undefined") return;
 
             const shareCard = document.getElementById("share-card");
-            const activeGroups = [];
             const wData = currentWeekData();
+            let columnsHtml = "";
+            let totalTeamsCount = 0;
 
+            // 走訪週二至週一 (所有當日團)，將每一團改為獨立的一欄 (share-group-column)
             wData.groups.forEach((group, groupIndex) => {
                 const hasTeam1 = group.team1 && group.team1.length > 0;
                 const hasTeam2 = group.team2 && group.team2.length > 0;
                 const hasTeam3 = group.team3 && group.team3.length > 0;
-                if (hasTeam1 || hasTeam2 || hasTeam3) activeGroups.push({ groupIndex, group });
+
+                // 若該團無任何隊伍放進去，則自動跳過不顯示
+                if (!hasTeam1 && !hasTeam2 && !hasTeam3) return;
+
+                const weekday = getWeekday(group.date);
+                const dateText = group.date ? `${group.date}${weekday ? `（${weekday}）` : ""}` : "";
+                const groupTitle = GROUP_NAMES[groupIndex] || `第${groupIndex + 1}團`;
+                const headerInfo = dateText ? `${groupTitle} - ${dateText}` : groupTitle;
+
+                let colHtml = `<div class="share-group-column">`;
+                colHtml += `<div class="share-group-header-text">${escapeHtml(headerInfo)}</div>`;
+
+                if (hasTeam1) {
+                    const t1Time = group.time1 || "20:00";
+                    colHtml += `<div class="share-team-title-text">⚔️ 第一隊 (${escapeHtml(t1Time)}) (${group.team1.length}人)</div>`;
+                    colHtml += formatShareHeader();
+                    group.team1.forEach(player => colHtml += formatShareLine(player));
+                }
+
+                if (hasTeam2) {
+                    const t2Time = group.time2 || "20:00";
+                    colHtml += `<div class="share-team-title-text" style="margin-top:14px;">⚔️ 第二隊 (${escapeHtml(t2Time)}) (${group.team2.length}人)</div>`;
+                    colHtml += formatShareHeader();
+                    group.team2.forEach(player => colHtml += formatShareLine(player));
+                }
+
+                if (hasTeam3) {
+                    const t3Time = group.time3 || "20:00";
+                    colHtml += `<div class="share-team-title-text" style="margin-top:14px;">⚔️ 第三隊 (${escapeHtml(t3Time)}) (${group.team3.length}人)</div>`;
+                    colHtml += formatShareHeader();
+                    group.team3.forEach(player => colHtml += formatShareLine(player));
+                }
+
+                colHtml += `</div>`;
+                columnsHtml += colHtml;
+                totalTeamsCount++;
             });
 
-            if (activeGroups.length === 0) {
+            if (totalTeamsCount === 0) {
                 alert("本週目前沒有任何已分配的隊伍可產生圖片！");
                 return;
             }
 
             previewImages = [];
+            shareCard.innerHTML = `<div class="share-card-inner">${columnsHtml}</div>`;
 
-            for (const { groupIndex, group } of activeGroups) {
-                const weekday = getWeekday(group.date);
-                const dateText = group.date ? `${group.date}${weekday ? `（${weekday}）` : ""}` : "";
-                const groupTitle = GROUP_NAMES[groupIndex] || `第${groupIndex + 1}團`;
-                
-                const headerInfo = dateText || groupTitle;
+            try {
+                await new Promise(resolve => requestAnimationFrame(resolve));
+                const canvas = await html2canvas(shareCard.firstElementChild, {
+                    scale: 2,
+                    useCORS: true,
+                    backgroundColor: "#111111",
+                    logging: false,
+                    imageTimeout: 0
+                });
 
-                let contentHtml = `<div class="share-group-header-text">${escapeHtml(headerInfo)}</div>`;
-
-                if (group.team1 && group.team1.length > 0) {
-                    const t1Time = group.time1 || "20:00";
-                    contentHtml += `<div class="share-team-title-text">⚔️ 第一隊 (${escapeHtml(t1Time)}) (${group.team1.length}人)</div>`;
-                    contentHtml += formatShareHeader();
-                    group.team1.forEach(player => contentHtml += formatShareLine(player));
-                }
-
-                if (group.team2 && group.team2.length > 0) {
-                    const t2Time = group.time2 || "20:00";
-                    contentHtml += `<div class="share-team-title-text" style="margin-top:20px;">⚔️ 第二隊 (${escapeHtml(t2Time)}) (${group.team2.length}人)</div>`;
-                    contentHtml += formatShareHeader();
-                    group.team2.forEach(player => contentHtml += formatShareLine(player));
-                }
-
-                if (group.team3 && group.team3.length > 0) {
-                    const t3Time = group.time3 || "20:00";
-                    contentHtml += `<div class="share-team-title-text" style="margin-top:20px;">⚔️ 第三隊 (${escapeHtml(t3Time)}) (${group.team3.length}人)</div>`;
-                    contentHtml += formatShareHeader();
-                    group.team3.forEach(player => contentHtml += formatShareLine(player));
-                }
-
-                shareCard.innerHTML = `<div class="share-card-inner">${contentHtml}</div>`;
-
-                try {
-                    await new Promise(resolve => requestAnimationFrame(resolve));
-                    const canvas = await html2canvas(shareCard.firstElementChild, {
-                        scale: 2,
-                        useCORS: true,
-                        backgroundColor: "#111111",
-                        logging: false,
-                        imageTimeout: 0
-                    });
-
-                    previewImages.push({
-                        title: headerInfo,
-                        dataUrl: canvas.toDataURL("image/png")
-                    });
-
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                } catch (error) {
-                    console.error("產生團隊圖片失敗：", error);
-                }
+                const weekTitle = getWeekDisplayTitle(state.activeWeek);
+                previewImages.push({
+                    title: `本週全部隊伍 (${weekTitle})`,
+                    dataUrl: canvas.toDataURL("image/png")
+                });
+            } catch (error) {
+                console.error("產生團隊圖片失敗：", error);
             }
 
             shareCard.innerHTML = "";

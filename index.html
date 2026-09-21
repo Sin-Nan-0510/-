@@ -35,7 +35,6 @@
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
         }
         
-        /* 圖片產生容器調整為自動多欄橫向延伸 */
         #share-card {
             position: fixed;
             left: -100000px;
@@ -52,7 +51,6 @@
             color: #d1d5db;
             font-family: "Microsoft JhengHei", sans-serif;
         }
-        /* 每一團 (週幾) 獨立成為一欄 */
         .share-group-column {
             width: 380px;
             background: #18181b;
@@ -221,6 +219,11 @@
         let previewImages = [];
         let currentImageIndex = 0;
 
+        let poolSortState = {
+            field: null,
+            direction: 'desc'
+        };
+
         let state = {
             activeWeek: formatDateKey(getTuesdayOfWeek()),
             activeGroup: 0,
@@ -229,11 +232,125 @@
             weeksData: {}
         };
 
-        function renderJobSelectOptions(currentJob) {
-            let html = `<option value="" ${!currentJob ? "selected" : ""}>職業</option>`;
-            JOB_LIST.forEach(job => {
-                html += `<option value="${job}" ${currentJob === job ? "selected" : ""}>${job}</option>`;
+        function sortPoolBy(field) {
+            if (poolSortState.field === field) {
+                poolSortState.direction = poolSortState.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                poolSortState.field = field;
+                poolSortState.direction = field === 'level' ? 'desc' : 'asc';
+            }
+
+            const dir = poolSortState.direction === 'asc' ? 1 : -1;
+
+            transactionUpdate(data => {
+                // 將成員依 groupId 分組（未綁定者各自一組）
+                const groupsMap = new Map();
+                const ungroupIds = [];
+
+                data.pool.forEach((player, idx) => {
+                    const gId = player.groupId ? String(player.groupId).trim() : null;
+                    if (gId) {
+                        if (!groupsMap.has(gId)) {
+                            groupsMap.set(gId, []);
+                        }
+                        groupsMap.get(gId).push(player);
+                    } else {
+                        const key = `_single_${idx}_${player.id}`;
+                        groupsMap.set(key, [player]);
+                    }
+                });
+
+                // 計算每個分組的主排序鍵（取該組中的極值或第一位）
+                const groupList = Array.from(groupsMap.values()).map(members => {
+                    let sortKey;
+                    if (field === 'level') {
+                        const levels = members.map(m => Number(getPlayerLevel(m)) || 0);
+                        sortKey = dir === 1 ? Math.min(...levels) : Math.max(...levels);
+                    } else if (field === 'job') {
+                        const jobs = members.map(m => String(m.job || ''));
+                        jobs.sort((a, b) => a.localeCompare(b, 'zh-TW'));
+                        sortKey = dir === 1 ? jobs[0] : jobs[jobs.length - 1];
+                    }
+                    return { members, sortKey };
+                });
+
+                // 針對各組進行排序
+                groupList.sort((a, b) => {
+                    if (field === 'level') {
+                        return (a.sortKey - b.sortKey) * dir;
+                    } else if (field === 'job') {
+                        return String(a.sortKey).localeCompare(String(b.sortKey), 'zh-TW') * dir;
+                    }
+                    return 0;
+                });
+
+                // 攤平重新組合總名單，同組綁定成員將會相連放置
+                const newPool = [];
+                groupList.forEach(group => {
+                    newPool.push(...group.members);
+                });
+
+                data.pool = newPool;
+                return true;
             });
+        }
+
+        function getJobColorClass(job) {
+            switch (job) {
+                case "黑騎士":
+                case "聖騎士":
+                case "英雄":
+                    return "bg-rose-900/80 border-rose-500 text-rose-200 font-bold";
+                case "火毒":
+                case "冰雷":
+                case "主教":
+                    return "bg-sky-900/80 border-sky-500 text-sky-200 font-bold";
+                case "箭神":
+                case "神射手":
+                    return "bg-fuchsia-900/80 border-fuchsia-500 text-fuchsia-200 font-bold";
+                case "夜使者":
+                case "暗影神偷":
+                    return "bg-orange-900/80 border-orange-500 text-orange-200 font-bold";
+                case "槍神":
+                case "拳霸":
+                    return "bg-emerald-900/80 border-emerald-500 text-emerald-200 font-bold";
+                default:
+                    return "bg-slate-900 border-slate-800 text-slate-400";
+            }
+        }
+
+        function getJobOptionStyle(job) {
+            switch (job) {
+                case "黑騎士": case "聖騎士": case "英雄":
+                    return "background-color: #881337; color: #fecdd3;";
+                case "火毒": case "冰雷": case "主教":
+                    return "background-color: #075985; color: #bae6fd;";
+                case "箭神": case "神射手":
+                    return "background-color: #701a75; color: #f5d0fe;";
+                case "夜使者": case "暗影神偷":
+                    return "background-color: #7c2d12; color: #ffedd5;";
+                case "槍神": case "拳霸":
+                    return "background-color: #064e3b; color: #a7f3d0;";
+                default:
+                    return "background-color: #0f172a; color: #94a3b8;";
+            }
+        }
+
+        function renderJobSelectOptions(currentJob) {
+            let html = `<option value="" style="background-color: #0f172a; color: #94a3b8;" ${!currentJob ? "selected" : ""}>職業</option>`;
+            JOB_LIST.forEach(job => {
+                const style = getJobOptionStyle(job);
+                html += `<option value="${job}" style="${style}" ${currentJob === job ? "selected" : ""}>${job}</option>`;
+            });
+            return html;
+        }
+
+        function renderGroupSelectOptions(currentGroupId) {
+            let html = `<option value="" class="bg-slate-900 text-slate-500" ${!currentGroupId ? "selected" : ""}>無綁定</option>`;
+            for (let i = 1; i <= 10; i++) {
+                const gid = `g${i}`;
+                html += `<option value="${gid}" class="bg-slate-900 text-amber-400 font-bold" ${currentGroupId === gid ? "selected" : ""}>本/分號 ${i}</option>`;
+            }
             return html;
         }
 
@@ -440,6 +557,7 @@
                 name: String(player.name || player["名稱"] || player["名字"] || "").trim(),
                 job: String(player.job || player["職業"] || "").trim(),
                 position: String(player.position || player["AD/AP"] || player["位置"] || "").trim(),
+                groupId: String(player.groupId || "").trim(),
                 availability: normalizePlayerAvailability(player.availability, currentWeekKey),
                 note: String(player.note || player["備註"] || "").trim()
             };
@@ -823,6 +941,7 @@
                 name: "",
                 job: "",
                 position: "",
+                groupId: "",
                 availability: {
                     [currentWeekKey]: ["", "", "", "", "", "", ""]
                 },
@@ -872,9 +991,10 @@
                 const group = data.weeksData[activeWeekKey].groups[groupIndex];
                 if (!group) return false;
                 if (!group[targetTeam]) group[targetTeam] = [];
+
                 if (group[targetTeam].length >= MAX_TEAM_SIZE) {
                     const label = targetTeam === "team1" ? "第一隊" : (targetTeam === "team2" ? "第二隊" : "第三隊");
-                    alert(`${label}已滿（6人）`);
+                    alert(`${label}名額已滿！`);
                     return false;
                 }
 
@@ -969,6 +1089,8 @@
 
         function memberCard(player, index, teamName) {
             const level = getPlayerLevel(player);
+            const jobColorClass = getJobColorClass(player.job);
+
             return `
                 <div data-id="${escapeHtml(player.id)}" class="drag-item flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950 p-2.5 transition hover:border-slate-700">
                     <div class="min-w-0 pr-1 flex-1">
@@ -978,7 +1100,7 @@
                                 <span class="text-xs text-slate-500 select-none">Lv.</span>
                                 <input type="text" value="${escapeHtml(level)}" placeholder="-" maxlength="3" inputmode="numeric" onchange="updatePlayerField('${player.id}', 'level', this.value)" class="w-8 rounded border border-slate-800 bg-slate-900 px-1 py-0.5 text-center text-xs font-semibold text-blue-400 focus:border-blue-500 focus:outline-none" title="點擊修改等級">
                             </div>
-                            <select onchange="updatePlayerField('${player.id}', 'job', this.value)" class="w-20 rounded border border-slate-800 bg-slate-900 px-1 py-0.5 text-xs text-slate-400 focus:border-blue-500 focus:outline-none" title="選擇職業">
+                            <select onchange="updatePlayerField('${player.id}', 'job', this.value)" class="w-20 rounded border px-1 py-0.5 text-xs transition-colors focus:border-blue-500 focus:outline-none ${jobColorClass}" title="選擇職業">
                                 ${renderJobSelectOptions(player.job)}
                             </select>
                             <input type="text" value="${escapeHtml(player.name)}" placeholder="名字" onchange="updatePlayerField('${player.id}', 'name', this.value)" class="w-20 rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-xs font-bold text-slate-200 focus:border-blue-500 focus:outline-none" title="點擊修改名字">
@@ -988,7 +1110,7 @@
                                 ${renderAvailabilitySelects(player)}
                             </div>
 
-                            <input type="text" value="${escapeHtml(player.note || '')}" placeholder="備註" onchange="updatePlayerField('${player.id}', 'note', this.value)" class="w-20 rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-400 focus:border-blue-500 focus:outline-none" title="點擊修改備註">
+                            <input type="text" value="${escapeHtml(player.note || '')}" placeholder="備註" onchange="updatePlayerField('${player.id}', 'note', this.value)" class="w-40 rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-400 focus:border-blue-500 focus:outline-none" title="點擊修改備註">
                         </div>
                     </div>
                     <div class="flex shrink-0 gap-1 ml-1">
@@ -1050,6 +1172,11 @@
                 ? "總名單成員" 
                 : `總名單（${state.filterAvailableOnly ? `僅含 ${currentDayName} 有空者` : "全體成員"}・可拖動排序/加入隊伍）`;
 
+            const getSortIcon = (field) => {
+                if (poolSortState.field !== field) return '↕️';
+                return poolSortState.direction === 'asc' ? '▲' : '▼';
+            };
+
             let html = `
                 <div class="rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-sm">
                     <div class="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
@@ -1062,7 +1189,17 @@
                                 </label>
                             ` : ''}
                         </div>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <div class="flex items-center gap-1 bg-slate-950/80 p-1 rounded-lg border border-slate-800 text-xs">
+                                <span class="text-slate-400 px-1 font-medium">排序：</span>
+                                <button onclick="sortPoolBy('level')" class="rounded border border-slate-700 bg-slate-800 px-2 py-0.5 text-slate-200 hover:bg-slate-700 transition">
+                                    等級 ${getSortIcon('level')}
+                                </button>
+                                <button onclick="sortPoolBy('job')" class="rounded border border-slate-700 bg-slate-800 px-2 py-0.5 text-slate-200 hover:bg-slate-700 transition">
+                                    職業 ${getSortIcon('job')}
+                                </button>
+                            </div>
+
                             <button onclick="addEmptyPoolPlayer()" class="rounded-lg border border-blue-600/50 bg-blue-600/20 px-2.5 py-1 text-xs font-semibold text-blue-300 hover:bg-blue-600/40 transition">➕ 新增成員</button>
                             <span class="rounded-full bg-blue-950 px-2.5 py-1 text-xs font-semibold text-blue-400">
                                 ${!isMasterView && state.filterAvailableOnly ? `${displayPool.length} /${state.pool.length} 人` : `${state.pool.length} 人`}
@@ -1081,6 +1218,8 @@
             } else {
                 displayPool.forEach((player, index) => {
                     const level = getPlayerLevel(player);
+                    const jobColorClass = getJobColorClass(player.job);
+                    
                     html += `
                         <div data-id="${escapeHtml(player.id)}" class="drag-item flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950 p-2.5 text-sm transition hover:border-slate-700">
                             <div class="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
@@ -1089,7 +1228,7 @@
                                     <span class="text-xs text-slate-500 select-none">Lv.</span>
                                     <input type="text" value="${escapeHtml(level)}" placeholder="-" maxlength="3" inputmode="numeric" onchange="updatePlayerField('${player.id}', 'level', this.value)" class="w-8 rounded border border-slate-800 bg-slate-900 px-1 py-0.5 text-center text-xs font-semibold text-blue-400 focus:border-blue-500 focus:outline-none" title="點擊修改等級">
                                 </div>
-                                <select onchange="updatePlayerField('${player.id}', 'job', this.value)" class="w-20 rounded border border-slate-800 bg-slate-900 px-1 py-0.5 text-xs text-slate-400 focus:border-blue-500 focus:outline-none" title="選擇職業">
+                                <select onchange="updatePlayerField('${player.id}', 'job', this.value)" class="w-20 rounded border px-1 py-0.5 text-xs transition-colors focus:border-blue-500 focus:outline-none ${jobColorClass}" title="選擇職業">
                                     ${renderJobSelectOptions(player.job)}
                                 </select>
                                 <input type="text" value="${escapeHtml(player.name)}" placeholder="名字" onchange="updatePlayerField('${player.id}', 'name', this.value)" class="w-20 rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-xs font-bold text-slate-200 focus:border-blue-500 focus:outline-none" title="點擊修改名字">
@@ -1099,7 +1238,11 @@
                                     ${renderAvailabilitySelects(player)}
                                 </div>
 
-                                <input type="text" value="${escapeHtml(player.note || '')}" placeholder="備註" onchange="updatePlayerField('${player.id}', 'note', this.value)" class="w-20 rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-400 focus:border-blue-500 focus:outline-none" title="點擊修改備註">
+                                <select onchange="updatePlayerField('${player.id}', 'groupId', this.value)" class="w-20 rounded border border-amber-900/80 bg-amber-950/40 px-1 py-0.5 text-xs text-amber-300 focus:border-amber-500 focus:outline-none" title="選擇同綁定編號者將會一起拖拉">
+                                    ${renderGroupSelectOptions(player.groupId)}
+                                </select>
+
+                                <input type="text" value="${escapeHtml(player.note || '')}" placeholder="備註" onchange="updatePlayerField('${player.id}', 'note', this.value)" class="w-40 rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-400 focus:border-blue-500 focus:outline-none" title="點擊修改備註">
                             </div>
                             <div class="flex items-center gap-1 shrink-0 ml-2">
                                 ${!isMasterView ? `
@@ -1166,28 +1309,37 @@
                             const poolPlayer = data.pool.find(p => String(p.id) === String(itemId));
                             if (!poolPlayer) return false;
 
-                            if (fromType === "pool" && toType === "pool") {
-                                const oldIdx = data.pool.findIndex(p => String(p.id) === String(itemId));
-                                if (oldIdx === -1) return false;
+                            // 在總名單內部拖曳排序時，連同綁定成員一起移位；若是放進隊伍，則僅放入單一成員
+                            let groupMembers = [poolPlayer];
+                            if (fromType === "pool" && toType === "pool" && poolPlayer.groupId) {
+                                const bound = data.pool.filter(p => p.groupId === poolPlayer.groupId);
+                                if (bound.length > 1) {
+                                    groupMembers = bound;
+                                }
+                            }
 
-                                const [moved] = data.pool.splice(oldIdx, 1);
-                                
+                            if (fromType === "pool" && toType === "pool") {
+                                const memberIds = new Set(groupMembers.map(p => String(p.id)));
+                                const remainingPool = data.pool.filter(p => !memberIds.has(String(p.id)));
+
                                 let targetIdx = newIndex;
                                 if (state.filterAvailableOnly && currentTab !== "master") {
                                     const dayAvail = state.activeGroup;
-                                    const filteredPool = data.pool.filter(p => {
+                                    const filteredPool = remainingPool.filter(p => {
                                         const avail = getPlayerWeekAvailability(p, activeWeekKey);
                                         return avail[dayAvail] && avail[dayAvail].trim() !== "";
                                     });
                                     if (newIndex < filteredPool.length) {
                                         const targetItem = filteredPool[newIndex];
-                                        targetIdx = data.pool.findIndex(p => String(p.id) === String(targetItem.id));
+                                        targetIdx = remainingPool.findIndex(p => String(p.id) === String(targetItem.id));
                                     } else {
-                                        targetIdx = data.pool.length;
+                                        targetIdx = remainingPool.length;
                                     }
                                 }
+
                                 if (targetIdx < 0) targetIdx = 0;
-                                data.pool.splice(targetIdx, 0, moved);
+                                remainingPool.splice(targetIdx, 0, ...groupMembers);
+                                data.pool = remainingPool;
                                 return true;
                             }
 
@@ -1200,10 +1352,17 @@
 
                             if (fromType === "pool" && isTargetTeam) {
                                 if (!targetGroup[toType]) targetGroup[toType] = [];
-                                if (targetGroup[toType].length >= MAX_TEAM_SIZE) return false;
-                                if (targetGroup[toType].some(p => String(p.id) === String(itemId))) {
+                                
+                                if (targetGroup[toType].length >= MAX_TEAM_SIZE) {
+                                    alert(`該隊伍人數已滿！`);
                                     return false;
                                 }
+
+                                if (targetGroup[toType].some(item => String(item.id) === String(poolPlayer.id))) {
+                                    alert(`「${poolPlayer.name || '此玩家'}」已經在該隊伍中！`);
+                                    return false;
+                                }
+
                                 const safeIndex = Math.max(0, Math.min(newIndex, targetGroup[toType].length));
                                 targetGroup[toType].splice(safeIndex, 0, { ...poolPlayer });
                                 return true;
@@ -1267,13 +1426,11 @@
             let columnsHtml = "";
             let totalTeamsCount = 0;
 
-            // 走訪週二至週一 (所有當日團)，將每一團改為獨立的一欄 (share-group-column)
             wData.groups.forEach((group, groupIndex) => {
                 const hasTeam1 = group.team1 && group.team1.length > 0;
                 const hasTeam2 = group.team2 && group.team2.length > 0;
                 const hasTeam3 = group.team3 && group.team3.length > 0;
 
-                // 若該團無任何隊伍放進去，則自動跳過不顯示
                 if (!hasTeam1 && !hasTeam2 && !hasTeam3) return;
 
                 const weekday = getWeekday(group.date);

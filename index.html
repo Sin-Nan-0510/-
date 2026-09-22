@@ -243,9 +243,7 @@
             const dir = poolSortState.direction === 'asc' ? 1 : -1;
 
             transactionUpdate(data => {
-                // 將成員依 groupId 分組（未綁定者各自一組）
                 const groupsMap = new Map();
-                const ungroupIds = [];
 
                 data.pool.forEach((player, idx) => {
                     const gId = player.groupId ? String(player.groupId).trim() : null;
@@ -260,7 +258,6 @@
                     }
                 });
 
-                // 計算每個分組的主排序鍵（取該組中的極值或第一位）
                 const groupList = Array.from(groupsMap.values()).map(members => {
                     let sortKey;
                     if (field === 'level') {
@@ -274,7 +271,6 @@
                     return { members, sortKey };
                 });
 
-                // 針對各組進行排序
                 groupList.sort((a, b) => {
                     if (field === 'level') {
                         return (a.sortKey - b.sortKey) * dir;
@@ -284,7 +280,6 @@
                     return 0;
                 });
 
-                // 攤平重新組合總名單，同組綁定成員將會相連放置
                 const newPool = [];
                 groupList.forEach(group => {
                     newPool.push(...group.members);
@@ -557,6 +552,7 @@
                 name: String(player.name || player["名稱"] || player["名字"] || "").trim(),
                 job: String(player.job || player["職業"] || "").trim(),
                 position: String(player.position || player["AD/AP"] || player["位置"] || "").trim(),
+                rounds: String(player.rounds || "7").trim(),
                 groupId: String(player.groupId || "").trim(),
                 availability: normalizePlayerAvailability(player.availability, currentWeekKey),
                 note: String(player.note || player["備註"] || "").trim()
@@ -941,6 +937,7 @@
                 name: "",
                 job: "",
                 position: "",
+                rounds: "7",
                 groupId: "",
                 availability: {
                     [currentWeekKey]: ["", "", "", "", "", "", ""]
@@ -1219,6 +1216,7 @@
                 displayPool.forEach((player, index) => {
                     const level = getPlayerLevel(player);
                     const jobColorClass = getJobColorClass(player.job);
+                    const roundsVal = player.rounds || "7";
                     
                     html += `
                         <div data-id="${escapeHtml(player.id)}" class="drag-item flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950 p-2.5 text-sm transition hover:border-slate-700">
@@ -1237,6 +1235,12 @@
                                 <div class="flex items-center gap-1 bg-slate-900/60 p-1 rounded border border-slate-800/80">
                                     ${renderAvailabilitySelects(player)}
                                 </div>
+
+                                <!-- 7場/14場 下拉選單移至綁定本/分號前面 -->
+                                <select onchange="updatePlayerField('${player.id}', 'rounds', this.value)" class="rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-200 focus:border-blue-500 focus:outline-none" title="選擇場次">
+                                    <option value="7" ${roundsVal === "7" ? "selected" : ""}>7場</option>
+                                    <option value="14" ${roundsVal === "14" ? "selected" : ""}>14場</option>
+                                </select>
 
                                 <select onchange="updatePlayerField('${player.id}', 'groupId', this.value)" class="w-20 rounded border border-amber-900/80 bg-amber-950/40 px-1 py-0.5 text-xs text-amber-300 focus:border-amber-500 focus:outline-none" title="選擇同綁定編號者將會一起拖拉">
                                     ${renderGroupSelectOptions(player.groupId)}
@@ -1309,7 +1313,6 @@
                             const poolPlayer = data.pool.find(p => String(p.id) === String(itemId));
                             if (!poolPlayer) return false;
 
-                            // 在總名單內部拖曳排序時，連同綁定成員一起移位；若是放進隊伍，則僅放入單一成員
                             let groupMembers = [poolPlayer];
                             if (fromType === "pool" && toType === "pool" && poolPlayer.groupId) {
                                 const bound = data.pool.filter(p => p.groupId === poolPlayer.groupId);

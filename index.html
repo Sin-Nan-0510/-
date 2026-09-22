@@ -384,19 +384,16 @@
             const end = new Date(start);
             end.setDate(start.getDate() + 6);
             
-            const weekdays = ["日", "一", "二", "三", "四", "五", "六"];
             const year = start.getFullYear();
-            
             const startM = String(start.getMonth() + 1).padStart(2, '0');
             const startD = String(start.getDate()).padStart(2, '0');
-            const startW = weekdays[start.getDay()];
+            const startStr = `${year} ${startM}/${startD}`;
 
             const endM = end.getMonth() + 1;
             const endD = String(end.getDate()).padStart(2, '0');
-            const endW = weekdays[end.getDay()];
+            const endStr = `${endM}/${endD}`;
 
-            const startStr = `${year} ${startM}/${startD}(${startW})`;
-            const endStr = `${endM}/${endD}(${endW})`;
+            const baseRangeStr = `${startStr} ~ ${endStr}`;
             
             const thisTuesdayKey = formatDateKey(getTuesdayOfWeek());
             let tag = "";
@@ -415,7 +412,7 @@
                     }
                 }
             }
-            return `${startStr} ~${endStr}${tag}`;
+            return `${baseRangeStr}${tag}`;
         }
 
         function isTwoWeeksAgoOrEarlier(weekKey) {
@@ -1452,9 +1449,10 @@
 
                 if (!hasTeam1 && !hasTeam2 && !hasTeam3) return;
 
-                const weekday = getWeekday(group.date);
-                const dateText = group.date ? `${group.date}${weekday ? `（${weekday}）` : ""}` : "";
+                const dateText = group.date ? group.date : "";
                 const groupTitle = GROUP_NAMES[groupIndex] || `第${groupIndex + 1}團`;
+                
+                // 調整為「週二 - 9/29」或僅「週二」格式，去除括號
                 const headerInfo = dateText ? `${groupTitle} - ${dateText}` : groupTitle;
 
                 let colHtml = `<div class="share-group-column">`;

@@ -105,6 +105,7 @@
 
 <body class="min-h-screen p-4 md:p-8">
     <div class="mx-auto max-w-7xl">
+        <!-- 頂部標題區 -->
         <header class="mb-6 text-center">
             <h1 class="mb-2 text-3xl font-bold tracking-wide text-blue-400 md:text-4xl">
                 Artale 隊伍分配
@@ -117,8 +118,7 @@
             <div class="flex flex-wrap items-center gap-2">
                 <span class="text-sm font-bold text-slate-300">📅 切換週別：</span>
                 <button onclick="switchWeekRelative(-1)" class="rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-xs font-semibold text-slate-200 hover:bg-slate-700 transition">◀ 上一週</button>
-                <select id="week-select" onchange="selectWeek(this.value)" class="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm font-bold text-blue-400 focus:border-blue-500 focus:outline-none">
-                </select>
+                <select id="week-select" onchange="selectWeek(this.value)" class="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm font-bold text-blue-400 focus:border-blue-500 focus:outline-none"></select>
                 <button onclick="switchWeekRelative(1)" class="rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-xs font-semibold text-slate-200 hover:bg-slate-700 transition">下一週 ▶</button>
                 <button onclick="jumpToCurrentWeek()" class="rounded-lg border border-blue-900 bg-blue-950 px-2.5 py-1.5 text-xs font-semibold text-blue-300 hover:bg-blue-900/50 transition">回到本週</button>
                 <button id="btn-delete-week" onclick="deleteCurrentWeek()" class="hidden rounded-lg border border-rose-900 bg-rose-950/80 px-2.5 py-1.5 text-xs font-semibold text-rose-300 hover:bg-rose-900 transition">🗑️ 刪除此週</button>
@@ -128,6 +128,7 @@
             </div>
         </div>
 
+        <!-- 分頁切換區塊 -->
         <div class="mb-6 grid grid-cols-2 gap-2 rounded-xl border border-slate-800 bg-slate-900/90 p-1.5 shadow-md">
             <button id="tab-btn-master" onclick="switchTab('master')" class="flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold transition-all duration-200">
                 <span>📋</span> 總名單 <span id="master-tab-badge" class="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-300">0人</span>
@@ -137,11 +138,14 @@
             </button>
         </div>
 
+        <!-- 主內容區 -->
         <main class="space-y-6">
+            <!-- 總名單頁面 -->
             <div id="tab-content-master" class="space-y-6 hidden">
                 <div id="master-view-container"></div>
             </div>
 
+            <!-- 隊伍分配頁面 -->
             <div id="tab-content-teams" class="space-y-6 hidden">
                 <div class="rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-sm">
                     <div class="flex flex-wrap items-center justify-between gap-3">
@@ -164,8 +168,10 @@
         </main>
     </div>
 
+    <!-- 圖片匯出暫存容器 -->
     <div id="share-card"></div>
 
+    <!-- 圖片預覽 Modal -->
     <div id="image-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
         <div class="relative flex max-h-[90vh] w-full max-w-5xl flex-col rounded-xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
             <div class="mb-4 flex items-center justify-between border-b border-slate-800 pb-3">
@@ -189,10 +195,12 @@
         </div>
     </div>
 
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
 
     <script>
+        // ==================== 1. 基礎設定與常數 ====================
         const firebaseConfig = {
             apiKey: "AIzaSyCbD0DlTCKkDzjkyADmovtjSe6j6blClZI",
             authDomain: "boss-3a974.firebaseapp.com",
@@ -211,6 +219,7 @@
         const WEEKDAYS = ["週二", "週三", "週四", "週五", "週六", "週日", "週一"];
         const JOB_LIST = ["黑騎士", "聖騎士", "英雄", "火毒", "冰雷", "主教", "箭神", "神射手", "夜使者", "暗影神偷", "槍神", "拳霸"];
 
+        // ==================== 2. 全域狀態變數 ====================
         let database = null;
         let firebaseEnabled = false;
         let sortableInstances = [];
@@ -232,6 +241,7 @@
             weeksData: {}
         };
 
+        // ==================== 3. 排序與樣式輔助函式 ====================
         function sortPoolBy(field) {
             if (poolSortState.field === field) {
                 poolSortState.direction = poolSortState.direction === 'asc' ? 'desc' : 'asc';
@@ -349,6 +359,7 @@
             return html;
         }
 
+        // ==================== 4. 日期與週別處理函式 ====================
         function getTuesdayOfWeek(d = new Date()) {
             const date = new Date(d);
             const day = date.getDay();
@@ -459,6 +470,7 @@
             el.textContent = text;
         }
 
+        // ==================== 5. Firebase 初始化與連線設定 ====================
         try {
             if (typeof firebase !== "undefined" && !firebase.apps.length) {
                 firebase.initializeApp(firebaseConfig);
@@ -481,6 +493,7 @@
             });
         }
 
+        // ==================== 6. 資料正規化與狀態管理 ====================
         function isLevel(value) {
             return /^(?:lv\.?\s*)?\d+$/i.test(String(value || "").trim());
         }
@@ -738,6 +751,7 @@
             });
         }
 
+        // ==================== 7. 互動事件處理函式 ====================
         function getAvailableWeekKeys() {
             const keysSet = new Set(Object.keys(state.weeksData || {}));
             const baseTue = getTuesdayOfWeek();
@@ -1058,6 +1072,7 @@
             });
         }
 
+        // ==================== 8. UI 渲染函式 ====================
         function escapeHtml(value) {
             return String(value ?? "")
                 .replaceAll("&", "&amp;")
@@ -1236,7 +1251,6 @@
                                     ${renderAvailabilitySelects(player)}
                                 </div>
 
-                                <!-- 7場/14場 下拉選單移至綁定本/分號前面 -->
                                 <select onchange="updatePlayerField('${player.id}', 'rounds', this.value)" class="rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-200 focus:border-blue-500 focus:outline-none" title="選擇場次">
                                     <option value="7" ${roundsVal === "7" ? "selected" : ""}>7場</option>
                                     <option value="14" ${roundsVal === "14" ? "selected" : ""}>14場</option>
@@ -1265,6 +1279,7 @@
             return html;
         }
 
+        // ==================== 9. SortableJS 拖曳互動設定 ====================
         function initSortables() {
             sortableInstances.forEach(instance => instance.destroy());
             sortableInstances = [];
@@ -1399,6 +1414,7 @@
             });
         }
 
+        // ==================== 10. 圖片匯出與預覽函式 ====================
         function formatShareHeader() {
             return `
                 <div class="share-row-item" style="border-bottom: 1px solid #334155; padding-bottom: 4px; margin-bottom: 6px; font-weight: 700; color: #94a3b8; font-size: 13px;">
@@ -1571,6 +1587,7 @@
             link.click();
         }
 
+        // ==================== 11. 主畫面渲染與初始化入口 ====================
         function render() {
             const defaultWeekKey = formatDateKey(getTuesdayOfWeek());
             state = state || {
@@ -1648,6 +1665,7 @@
             initSortables();
         }
 
+        // 啟動程式
         initFirebaseListener();
     </script>
 </body>

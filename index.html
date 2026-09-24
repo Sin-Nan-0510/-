@@ -634,7 +634,7 @@
                 // 相容舊版本的 team1/team2/team3 資料結構轉換
                 if (Array.isArray(group.teams)) {
                     teams = group.teams.map((t, tIdx) => ({
-                        name: t.name || `第${tIdx + 1}隊`,
+                        name: `第${tIdx + 1}隊`,
                         emoji: t.emoji || "⚔️",
                         time: t.time || "20:00",
                         con: Boolean(t.con),
@@ -642,9 +642,9 @@
                     }));
                 } else {
                     teams = [
-                        { name: "第一隊", emoji: "⚔️", time: group.time1 || group.time || "20:00", con: Boolean(group.con1), members: Array.isArray(group.team1) ? group.team1.map(p => normalizePlayer(p, weekKey)).filter(Boolean) : [] },
-                        { name: "第二隊", emoji: "⚔️", time: group.time2 || group.time || "20:00", con: Boolean(group.con2), members: Array.isArray(group.team2) ? group.team2.map(p => normalizePlayer(p, weekKey)).filter(Boolean) : [] },
-                        { name: "第三隊", emoji: "⚔️", time: group.time3 || group.time || "20:00", con: Boolean(group.con3), members: Array.isArray(group.team3) ? group.team3.map(p => normalizePlayer(p, weekKey)).filter(Boolean) : [] }
+                        { name: "第1隊", emoji: "⚔️", time: group.time1 || group.time || "20:00", con: Boolean(group.con1), members: Array.isArray(group.team1) ? group.team1.map(p => normalizePlayer(p, weekKey)).filter(Boolean) : [] },
+                        { name: "第2隊", emoji: "⚔️", time: group.time2 || group.time || "20:00", con: Boolean(group.con2), members: Array.isArray(group.team2) ? group.team2.map(p => normalizePlayer(p, weekKey)).filter(Boolean) : [] },
+                        { name: "第3隊", emoji: "⚔️", time: group.time3 || group.time || "20:00", con: Boolean(group.con3), members: Array.isArray(group.team3) ? group.team3.map(p => normalizePlayer(p, weekKey)).filter(Boolean) : [] }
                     ];
                 }
 

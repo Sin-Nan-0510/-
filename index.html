@@ -242,7 +242,6 @@
         };
 
         // ==================== 3. 防呆計算輔助函式 ====================
-        // 計算某個玩家在當前週總共被分配到幾個隊伍中
         function getPlayerWeeklyTeamCount(playerId, weekData) {
             if (!weekData || !weekData.groups) return 0;
             let count = 0;
@@ -256,7 +255,6 @@
             return count;
         }
 
-        // 檢查玩家是否已經達到當前週的隊伍上限
         function hasReachedWeeklyLimit(player, weekData) {
             const rounds = String(player.rounds || "7");
             const assignedCount = getPlayerWeeklyTeamCount(player.id, weekData);
@@ -454,7 +452,12 @@
         }
 
         function emptyGroup() {
-            return { team1: [], team2: [], team3: [], time1: "20:00", time2: "20:00", time3: "20:00", date: "" };
+            return { 
+                team1: [], team2: [], team3: [], 
+                time1: "20:00", time2: "20:00", time3: "20:00", 
+                con1: false, con2: false, con3: false, 
+                date: "" 
+            };
         }
 
         function createDefaultWeekGroups(weekKey) {
@@ -468,6 +471,7 @@
                 return {
                     team1: [], team2: [], team3: [],
                     time1: "20:00", time2: "20:00", time3: "20:00",
+                    con1: false, con2: false, con3: false,
                     date: dateStr
                 };
             });
@@ -622,6 +626,9 @@
                     time1: typeof group.time1 === "string" && group.time1 ? group.time1 : (typeof group.time === "string" && group.time ? group.time : "20:00"),
                     time2: typeof group.time2 === "string" && group.time2 ? group.time2 : (typeof group.time === "string" && group.time ? group.time : "20:00"),
                     time3: typeof group.time3 === "string" && group.time3 ? group.time3 : (typeof group.time === "string" && group.time ? group.time : "20:00"),
+                    con1: Boolean(group.con1),
+                    con2: Boolean(group.con2),
+                    con3: Boolean(group.con3),
                     date: typeof group.date === "string" && group.date ? group.date : defaultGroups[idx].date
                 };
             });
@@ -870,6 +877,19 @@
             });
         }
 
+        function updateTeamCon(teamName, checked) {
+            const activeWeekKey = state.activeWeek;
+            const groupIndex = state.activeGroup;
+            const conKey = teamName === "team1" ? "con1" : (teamName === "team2" ? "con2" : "con3");
+            transactionUpdate(data => {
+                if (!data.weeksData || !data.weeksData[activeWeekKey]) return false;
+                const group = data.weeksData[activeWeekKey].groups[groupIndex];
+                if (!group) return false;
+                group[conKey] = Boolean(checked);
+                return true;
+            });
+        }
+
         function updateGroupDate(index, date) {
             const activeWeekKey = state.activeWeek;
             transactionUpdate(data => {
@@ -1024,7 +1044,6 @@
                 const group = weekData.groups[groupIndex];
                 if (!group) return false;
                 
-                // 防呆檢查：如果已達到該週上限，禁止加入
                 if (hasReachedWeeklyLimit(player, weekData)) {
                     const rounds = String(player.rounds || "7");
                     const limitText = rounds === "14" ? "2個隊伍" : "1個隊伍";
@@ -1082,6 +1101,9 @@
                 target.time1 = "20:00";
                 target.time2 = "20:00";
                 target.time3 = "20:00";
+                target.con1 = false;
+                target.con2 = false;
+                target.con3 = false;
                 return true;
             });
         }
@@ -1163,10 +1185,11 @@
             `;
         }
 
-        function renderTeam(teamName, title, emoji, timeKey) {
+        function renderTeam(teamName, title, emoji, timeKey, conKey) {
             const group = currentGroup();
             const members = group && group[teamName] ? group[teamName] : [];
             const teamTime = group && group[timeKey] ? group[timeKey] : "20:00";
+            const teamCon = group && Boolean(group[conKey]);
 
             let html = `
                 <div class="rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-sm">
@@ -1181,6 +1204,10 @@
                                 <span class="text-xs text-slate-400 font-medium">⏰ 時間:</span>
                                 <input type="text" value="${escapeHtml(teamTime)}" placeholder="20:00" maxlength="5" inputmode="numeric" onchange="updateTeamTime('${teamName}', this.value)" class="w-16 rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-center text-xs font-bold text-blue-400 focus:border-blue-500 focus:outline-none" title="設定此隊伍時間">
                             </div>
+                            <label class="flex items-center gap-1.5 text-xs text-amber-300 bg-amber-950/60 border border-amber-900/50 px-2.5 py-1 rounded-lg cursor-pointer hover:bg-amber-900/40 transition select-none">
+                                <input type="checkbox" ${teamCon ? "checked" : ""} onchange="updateTeamCon('${teamName}', this.checked)" class="rounded border-slate-700 text-amber-600 focus:ring-0">
+                                <span>連14場</span>
+                            </label>
                         </div>
                         <span class="rounded-full bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-300">${members.length} / 6</span>
                     </div>
@@ -1206,7 +1233,6 @@
 
             let displayPool = state.pool;
             
-            // 防呆核心：過濾掉已經達成當週上限的成員，使他們不在最底下名單中出現
             displayPool = displayPool.filter(player => !hasReachedWeeklyLimit(player, wData));
 
             if (!isMasterView && state.filterAvailableOnly) {
@@ -1402,7 +1428,6 @@
                             const isSourceTeam = fromType === "team1" || fromType === "team2" || fromType === "team3";
 
                             if (fromType === "pool" && isTargetTeam) {
-                                // 拖曳防呆檢查
                                 if (hasReachedWeeklyLimit(poolPlayer, weekData)) {
                                     const rounds = String(poolPlayer.rounds || "7");
                                     const limitText = rounds === "14" ? "2個隊伍" : "1個隊伍";
@@ -1502,21 +1527,24 @@
 
                 if (hasTeam1) {
                     const t1Time = group.time1 || "20:00";
-                    colHtml += `<div class="share-team-title-text">⚔️ 第一隊 (${escapeHtml(t1Time)}) (${group.team1.length}人)</div>`;
+                    const con1Text = group.con1 ? "(連14場)" : "";
+                    colHtml += `<div class="share-team-title-text">⚔️ 第一隊 (${escapeHtml(t1Time)}) (${group.team1.length}人) ${con1Text}</div>`;
                     colHtml += formatShareHeader();
                     group.team1.forEach(player => colHtml += formatShareLine(player));
                 }
 
                 if (hasTeam2) {
                     const t2Time = group.time2 || "20:00";
-                    colHtml += `<div class="share-team-title-text" style="margin-top:14px;">⚔️ 第二隊 (${escapeHtml(t2Time)}) (${group.team2.length}人)</div>`;
+                    const con2Text = group.con2 ? "(連14場)" : "";
+                    colHtml += `<div class="share-team-title-text" style="margin-top:14px;">⚔️ 第二隊 (${escapeHtml(t2Time)}) (${group.team2.length}人) ${con2Text}</div>`;
                     colHtml += formatShareHeader();
                     group.team2.forEach(player => colHtml += formatShareLine(player));
                 }
 
                 if (hasTeam3) {
                     const t3Time = group.time3 || "20:00";
-                    colHtml += `<div class="share-team-title-text" style="margin-top:14px;">⚔️ 第三隊 (${escapeHtml(t3Time)}) (${group.team3.length}人)</div>`;
+                    const con3Text = group.con3 ? "(連14場)" : "";
+                    colHtml += `<div class="share-team-title-text" style="margin-top:14px;">⚔️ 第三隊 (${escapeHtml(t3Time)}) (${group.team3.length}人) ${con3Text}</div>`;
                     colHtml += formatShareHeader();
                     group.team3.forEach(player => colHtml += formatShareLine(player));
                 }
@@ -1697,9 +1725,9 @@
 
             document.getElementById("master-view-container").innerHTML = renderPool(true);
             document.getElementById("teams-cards-container").innerHTML = 
-                renderTeam("team1", "第一隊", "⚔️", "time1") + 
-                renderTeam("team2", "第二隊", "⚔️", "time2") + 
-                renderTeam("team3", "第三隊", "⚔️", "time3");
+                renderTeam("team1", "第一隊", "⚔️", "time1", "con1") + 
+                renderTeam("team2", "第二隊", "⚔️", "time2", "con2") + 
+                renderTeam("team3", "第三隊", "⚔️", "time3", "con3");
             document.getElementById("teams-pool-container").innerHTML = renderPool(false);
 
             initSortables();

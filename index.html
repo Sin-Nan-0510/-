@@ -52,53 +52,71 @@
             font-family: "Microsoft JhengHei", sans-serif;
         }
         .share-group-column {
-            width: 380px;
+            width: 330px;
             background: #18181b;
             border: 1px solid #27272a;
             border-radius: 12px;
-            padding: 20px;
+            padding: 14px 16px;
             flex-shrink: 0;
         }
         .share-group-header-text {
             font-size: 22px;
             font-weight: 700;
             color: #f3f4f6;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
             letter-spacing: 0.5px;
             border-bottom: 2px solid #3b82f6;
-            padding-bottom: 8px;
+            padding-bottom: 5px;
         }
         .share-team-title-text {
             font-size: 17px;
             font-weight: 700;
             color: #93c5fd;
-            margin-top: 14px;
-            margin-bottom: 6px;
+            margin-top: 8px;
+            margin-bottom: 3px;
+            line-height: 21px;
         }
+        /* 修正：增加文字行高與上下空間，避免產生圖片時名字底部被裁切 */
         .share-row-item {
             display: flex;
             align-items: center;
+            min-height: 28px;
+            height: 28px;
+            padding: 0;
+            line-height: 20px;
             font-size: 15px;
-            line-height: 1.5;
             color: #e5e7eb;
-            margin-bottom: 4px;
+            margin-bottom: 1px;
+            overflow: visible;
         }
         .share-col-level {
-            width: 60px;
+            width: 48px;
             text-align: right;
-            margin-right: 12px;
+            margin-right: 6px;
             color: #93c5fd;
             font-weight: 600;
             flex-shrink: 0;
         }
         .share-col-job {
-            width: 100px;
-            margin-right: 12px;
+            width: 72px;
+            margin-right: 6px;
             flex-shrink: 0;
         }
         .share-col-name {
-            flex: 1;
-            word-break: break-all;
+            width: 110px;
+            margin-right: 6px;
+            overflow: visible;
+            text-overflow: clip;
+            white-space: nowrap;
+            line-height: 20px;
+            min-height: 20px;
+            flex-shrink: 0;
+        }
+        .share-col-part {
+            width: 50px;
+            color: #c084fc;
+            font-size: 14px;
+            flex-shrink: 0;
         }
     </style>
 </head>
@@ -107,9 +125,7 @@
     <div class="mx-auto max-w-7xl">
         <!-- 頂部標題區 -->
         <header class="mb-6 text-center">
-            <h1 class="mb-2 text-3xl font-bold tracking-wide text-blue-400 md:text-4xl">
-                Artale 隊伍分配
-            </h1>
+            <h1 class="mb-2 text-3xl font-bold tracking-wide text-blue-400 md:text-4xl">Artale 隊伍分配</h1>
             <p id="sync-status" class="mt-1 text-[11px] text-slate-500">☁ Firebase 連線中...</p>
         </header>
 
@@ -154,14 +170,14 @@
                     <div id="group-tabs" class="mt-4 flex flex-wrap gap-3"></div>
                 </div>
 
-                <!-- 隊伍管理操作列：新增/減少隊伍 -->
+                <!-- 隊伍管理操作列 -->
                 <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 px-5 py-3 shadow-sm">
                     <div class="text-xs text-slate-400">
                         📌 當前遠征團共有 <span id="current-teams-count" class="text-blue-400 font-bold">3</span> 支隊伍
                     </div>
                     <div class="flex items-center gap-2">
                         <button onclick="addTeamToCurrentGroup()" class="rounded-lg border border-emerald-800 bg-emerald-950/60 px-3 py-1.5 text-xs font-bold text-emerald-300 hover:bg-emerald-900/50 transition">➕ 新增隊伍</button>
-                        <button onclick="removeTeamFromCurrentGroup()" class="rounded-lg border border-rose-900 bg-rose-950/60 px-3 py-1.5 text-xs font-bold text-rose-300 hover:bg-rose-900/50 transition">➖ 減少最後一隊</button>
+                        <button onclick="removeTeamFromCurrentGroup()" class="rounded-lg border border-rose-900 bg-rose-950/60 px-3 py-1.5 text-xs font-bold text-rose-300 hover:bg-rose-900 transition">➖ 減少最後一隊</button>
                     </div>
                 </div>
 
@@ -211,7 +227,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
 
     <script>
-        // ==================== 1. 基礎設定與常數 ====================
         const firebaseConfig = {
             apiKey: "AIzaSyCbD0DlTCKkDzjkyADmovtjSe6j6blClZI",
             authDomain: "boss-3a974.firebaseapp.com",
@@ -225,24 +240,13 @@
         const FIREBASE_PATH = "artale_party_state_v3";
         const STORAGE_KEY = "artale_party_local_v3";
         const MAX_GROUPS = 7;
-        const MAX_TEAM_SIZE = 6;
         const GROUP_NAMES = ["週二", "週三", "週四", "週五", "週六", "週日", "週一"];
         const WEEKDAYS = ["週二", "週三", "週四", "週五", "週六", "週日", "週一"];
         const JOB_LIST = ["黑騎士", "聖騎士", "英雄", "火毒", "冰雷", "主教", "箭神", "神射手", "夜使者", "暗影神偷", "槍神", "拳霸"];
 
-        // ==================== 2. 全域狀態變數 ====================
-        let database = null;
-        let firebaseEnabled = false;
-        let sortableInstances = [];
-        let currentTab = "master";
-        let copyBtnTimer = null;
-        let previewImages = [];
-        let currentImageIndex = 0;
-
-        let poolSortState = {
-            field: null,
-            direction: 'desc'
-        };
+        let database = null, firebaseEnabled = false, sortableInstances = [];
+        let currentTab = "master", copyBtnTimer = null, previewImages = [], currentImageIndex = 0;
+        let poolSortState = { field: null, direction: 'desc' };
 
         let state = {
             activeWeek: formatDateKey(getTuesdayOfWeek()),
@@ -252,15 +256,12 @@
             weeksData: {}
         };
 
-        // ==================== 3. 防呆計算輔助函式 ====================
         function getPlayerWeeklyTeamCount(playerId, weekData) {
             if (!weekData || !weekData.groups) return 0;
             let count = 0;
             weekData.groups.forEach(group => {
-                const teams = group.teams || [];
-                teams.forEach((team, idx) => {
+                (group.teams || []).forEach(team => {
                     if (team && team.members && team.members.some(p => String(p.id) === String(playerId))) {
-                        // 如果該隊伍的「連14場」有打勾，計為 2 場；否則計為 1 場
                         count += team.con ? 2 : 1;
                     }
                 });
@@ -276,7 +277,6 @@
             return false;
         }
 
-        // ==================== 4. 排序與樣式輔助函式 ====================
         function sortPoolBy(field) {
             if (poolSortState.field === field) {
                 poolSortState.direction = poolSortState.direction === 'asc' ? 'desc' : 'asc';
@@ -284,22 +284,17 @@
                 poolSortState.field = field;
                 poolSortState.direction = field === 'level' ? 'desc' : 'asc';
             }
-
             const dir = poolSortState.direction === 'asc' ? 1 : -1;
 
             transactionUpdate(data => {
                 const groupsMap = new Map();
-
                 data.pool.forEach((player, idx) => {
                     const gId = player.groupId ? String(player.groupId).trim() : null;
                     if (gId) {
-                        if (!groupsMap.has(gId)) {
-                            groupsMap.set(gId, []);
-                        }
+                        if (!groupsMap.has(gId)) groupsMap.set(gId, []);
                         groupsMap.get(gId).push(player);
                     } else {
-                        const key = `_single_${idx}_${player.id}`;
-                        groupsMap.set(key, [player]);
+                        groupsMap.set(`_single_${idx}_${player.id}`, [player]);
                     }
                 });
 
@@ -317,70 +312,43 @@
                 });
 
                 groupList.sort((a, b) => {
-                    if (field === 'level') {
-                        return (a.sortKey - b.sortKey) * dir;
-                    } else if (field === 'job') {
-                        return String(a.sortKey).localeCompare(String(b.sortKey), 'zh-TW') * dir;
-                    }
+                    if (field === 'level') return (a.sortKey - b.sortKey) * dir;
+                    if (field === 'job') return String(a.sortKey).localeCompare(String(b.sortKey), 'zh-TW') * dir;
                     return 0;
                 });
 
-                const newPool = [];
-                groupList.forEach(group => {
-                    newPool.push(...group.members);
-                });
-
-                data.pool = newPool;
+                data.pool = [];
+                groupList.forEach(group => data.pool.push(...group.members));
                 return true;
             });
         }
 
         function getJobColorClass(job) {
             switch (job) {
-                case "黑騎士":
-                case "聖騎士":
-                case "英雄":
-                    return "bg-rose-900/80 border-rose-500 text-rose-200 font-bold";
-                case "火毒":
-                case "冰雷":
-                case "主教":
-                    return "bg-sky-900/80 border-sky-500 text-sky-200 font-bold";
-                case "箭神":
-                case "神射手":
-                    return "bg-fuchsia-900/80 border-fuchsia-500 text-fuchsia-200 font-bold";
-                case "夜使者":
-                case "暗影神偷":
-                    return "bg-orange-900/80 border-orange-500 text-orange-200 font-bold";
-                case "槍神":
-                case "拳霸":
-                    return "bg-emerald-900/80 border-emerald-500 text-emerald-200 font-bold";
-                default:
-                    return "bg-slate-900 border-slate-800 text-slate-400";
+                case "黑騎士": case "聖騎士": case "英雄": return "bg-rose-900/80 border-rose-500 text-rose-200 font-bold";
+                case "火毒": case "冰雷": case "主教": return "bg-sky-900/80 border-sky-500 text-sky-200 font-bold";
+                case "箭神": case "神射手": return "bg-fuchsia-900/80 border-fuchsia-500 text-fuchsia-200 font-bold";
+                case "夜使者": case "暗影神偷": return "bg-orange-900/80 border-orange-500 text-orange-200 font-bold";
+                case "槍神": case "拳霸": return "bg-emerald-900/80 border-emerald-500 text-emerald-200 font-bold";
+                default: return "bg-slate-900 border-slate-800 text-slate-400";
             }
         }
 
         function getJobOptionStyle(job) {
             switch (job) {
-                case "黑騎士": case "聖騎士": case "英雄":
-                    return "background-color: #881337; color: #fecdd3;";
-                case "火毒": case "冰雷": case "主教":
-                    return "background-color: #075985; color: #bae6fd;";
-                case "箭神": case "神射手":
-                    return "background-color: #701a75; color: #f5d0fe;";
-                case "夜使者": case "暗影神偷":
-                    return "background-color: #7c2d12; color: #ffedd5;";
-                case "槍神": case "拳霸":
-                    return "background-color: #064e3b; color: #a7f3d0;";
-                default:
-                    return "background-color: #0f172a; color: #94a3b8;";
+                case "黑騎士": case "聖騎士": case "英雄": return "background-color: #881337; color: #fecdd3;";
+                case "火毒": case "冰雷": case "主教": return "background-color: #075985; color: #bae6fd;";
+                case "箭神": case "神射手": return "background-color: #701a75; color: #f5d0fe;";
+                case "夜使者": case "暗影神偷": return "background-color: #7c2d12; color: #ffedd5;";
+                case "槍神": case "拳霸": return "background-color: #064e3b; color: #a7f3d0;";
+                default: return "background-color: #0f172a; color: #94a3b8;";
             }
         }
 
         function renderJobSelectOptions(currentJob) {
             let html = `<option value="" style="background-color: #0f172a; color: #94a3b8;" ${!currentJob ? "selected" : ""}>職業</option>`;
             JOB_LIST.forEach(job => {
-                const style = getJobOptionStyle(job);
-                html += `<option value="${job}" style="${style}" ${currentJob === job ? "selected" : ""}>${job}</option>`;
+                html += `<option value="${job}" style="${getJobOptionStyle(job)}" ${currentJob === job ? "selected" : ""}>${job}</option>`;
             });
             return html;
         }
@@ -388,81 +356,51 @@
         function renderGroupSelectOptions(currentGroupId) {
             let html = `<option value="" class="bg-slate-900 text-slate-500" ${!currentGroupId ? "selected" : ""}></option>`;
             for (let i = 1; i <= 15; i++) {
-                const gid = `g${i}`;
-                html += `<option value="${gid}" class="bg-slate-900 text-amber-400 font-bold" ${currentGroupId === gid ? "selected" : ""}>大小號 ${i}</option>`;
+                html += `<option value="g${i}" class="bg-slate-900 text-amber-400 font-bold" ${currentGroupId === `g${i}` ? "selected" : ""}>大小號 ${i}</option>`;
             }
             return html;
         }
 
-        // ==================== 5. 日期與週別處理函式 ====================
         function getTuesdayOfWeek(d = new Date()) {
             const date = new Date(d);
             const day = date.getDay();
-            let diffToTuesday = (day >= 2) ? (2 - day) : (2 - day - 7);
-            date.setDate(date.getDate() + diffToTuesday);
+            date.setDate(date.getDate() + ((day >= 2) ? (2 - day) : (2 - day - 7)));
             date.setHours(0, 0, 0, 0);
             return date;
         }
 
         function formatDateKey(date) {
-            const y = date.getFullYear();
-            const m = String(date.getMonth() + 1).padStart(2, '0');
-            const d = String(date.getDate()).padStart(2, '0');
-            return `${y}-${m}-${d}`;
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
         }
 
         function getWeekDisplayTitle(weekKey) {
             if (!weekKey) return "";
-            const parts = weekKey.split('-').map(Number);
-            if (parts.length < 3) return weekKey;
-            const start = new Date(parts[0], parts[1] - 1, parts[2]);
+            const [y, m, d] = weekKey.split('-').map(Number);
+            if (!y) return weekKey;
+            const start = new Date(y, m - 1, d);
             const end = new Date(start);
             end.setDate(start.getDate() + 6);
+            const rangeStr = `${start.getFullYear()} ${String(start.getMonth() + 1).padStart(2, '0')}/${String(start.getDate()).padStart(2, '0')} ~ ${end.getMonth() + 1}/${String(end.getDate()).padStart(2, '0')}`;
             
-            const year = start.getFullYear();
-            const startM = String(start.getMonth() + 1).padStart(2, '0');
-            const startD = String(start.getDate()).padStart(2, '0');
-            const startStr = `${year} ${startM}/${startD}`;
-
-            const endM = end.getMonth() + 1;
-            const endD = String(end.getDate()).padStart(2, '0');
-            const endStr = `${endM}/${endD}`;
-
-            const baseRangeStr = `${startStr} ~ ${endStr}`;
-            
-            const thisTuesdayKey = formatDateKey(getTuesdayOfWeek());
-            let tag = "";
-            if (weekKey === thisTuesdayKey) {
-                tag = " (本週)";
-            } else {
-                const nextTuesday = getTuesdayOfWeek();
-                nextTuesday.setDate(nextTuesday.getDate() + 7);
-                if (weekKey === formatDateKey(nextTuesday)) {
-                    tag = " (下週)";
-                } else {
-                    const lastTuesday = getTuesdayOfWeek();
-                    lastTuesday.setDate(lastTuesday.getDate() - 7);
-                    if (weekKey === formatDateKey(lastTuesday)) {
-                        tag = " (上週)";
-                    }
-                }
-            }
-            return `${baseRangeStr}${tag}`;
+            const thisKey = formatDateKey(getTuesdayOfWeek());
+            if (weekKey === thisKey) return `${rangeStr} (本週)`;
+            const nextTue = getTuesdayOfWeek(); nextTue.setDate(nextTue.getDate() + 7);
+            if (weekKey === formatDateKey(nextTue)) return `${rangeStr} (下週)`;
+            const lastTue = getTuesdayOfWeek(); lastTue.setDate(lastTue.getDate() - 7);
+            if (weekKey === formatDateKey(lastTue)) return `${rangeStr} (上週)`;
+            return rangeStr;
         }
 
         function isTwoWeeksAgoOrEarlier(weekKey) {
             if (!weekKey) return false;
-            const parts = weekKey.split('-').map(Number);
-            if (parts.length < 3) return false;
-            const targetDate = new Date(parts[0], parts[1] - 1, parts[2]);
+            const [y, m, d] = weekKey.split('-').map(Number);
+            const targetDate = new Date(y, m - 1, d);
             const twoWeeksAgo = getTuesdayOfWeek();
             twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
             return targetDate <= twoWeeksAgo;
         }
 
-        function makeId() {
-            return Date.now() + "-" + Math.random().toString(36).substring(2, 10);
-        }
+        function makeId() { return Date.now() + "-" + Math.random().toString(36).substring(2, 10); }
 
         function createDefaultTeams() {
             return [
@@ -473,976 +411,488 @@
         }
 
         function createDefaultWeekGroups(weekKey) {
-            const parts = (weekKey || formatDateKey(getTuesdayOfWeek())).split('-').map(Number);
-            const startDate = (parts.length === 3) ? new Date(parts[0], parts[1] - 1, parts[2]) : getTuesdayOfWeek();
-
+            const [y, m, d] = (weekKey || formatDateKey(getTuesdayOfWeek())).split('-').map(Number);
+            const startDate = y ? new Date(y, m - 1, d) : getTuesdayOfWeek();
             return Array.from({ length: MAX_GROUPS }, (_, i) => {
                 const targetDate = new Date(startDate);
                 targetDate.setDate(startDate.getDate() + i);
-                const dateStr = `${targetDate.getMonth() + 1}/${targetDate.getDate()}`;
-                return {
-                    teams: createDefaultTeams(),
-                    date: dateStr
-                };
+                return { teams: createDefaultTeams(), date: `${targetDate.getMonth() + 1}/${targetDate.getDate()}` };
             });
         }
 
         function createEmptyFirebaseData() {
             const defaultWeekKey = formatDateKey(getTuesdayOfWeek());
-            return {
-                activeWeek: defaultWeekKey,
-                pool: [],
-                weeksData: {
-                    [defaultWeekKey]: { groups: createDefaultWeekGroups(defaultWeekKey) }
-                }
-            };
+            return { activeWeek: defaultWeekKey, pool: [], weeksData: { [defaultWeekKey]: { groups: createDefaultWeekGroups(defaultWeekKey) } } };
         }
 
         function setSyncStatus(text, className = "text-[11px] text-slate-500") {
             const el = document.getElementById("sync-status");
-            if (!el) return;
-            el.className = `mt-1 ${className}`;
-            el.textContent = text;
+            if (el) { el.className = `mt-1 ${className}`; el.textContent = text; }
         }
 
-        // ==================== 6. Firebase 初始化與連線設定 ====================
         try {
-            if (typeof firebase !== "undefined" && !firebase.apps.length) {
-                firebase.initializeApp(firebaseConfig);
-            }
+            if (typeof firebase !== "undefined" && !firebase.apps.length) firebase.initializeApp(firebaseConfig);
             database = firebase.database();
             firebaseEnabled = true;
         } catch (error) {
-            console.error("Firebase 初始化失敗：", error);
             firebaseEnabled = false;
             setSyncStatus("⚠ Firebase 初始化失敗，使用本機儲存", "text-[11px] text-rose-400");
         }
 
         if (firebaseEnabled) {
-            database.ref(".info/connected").on("value", snapshot => {
-                if (snapshot.val() === true) {
-                    setSyncStatus("☁ 已連線到 Firebase", "text-[11px] text-emerald-400");
-                } else {
-                    setSyncStatus("☁ Firebase 連線中...", "text-[11px] text-amber-400");
-                }
+            database.ref(".info/connected").on("value", snap => {
+                setSyncStatus(snap.val() === true ? "☁ 已連線到 Firebase" : "☁ Firebase 連線中...", snap.val() === true ? "text-[11px] text-emerald-400" : "text-[11px] text-amber-400");
             });
         }
 
-        // ==================== 7. 資料正規化與狀態管理 ====================
-        function isLevel(value) {
-            return /^(?:lv\.?\s*)?\d+$/i.test(String(value || "").trim());
-        }
-
-        function normalizeLevel(value) {
-            const text = String(value || "").trim();
-            const match = text.match(/\d+/);
-            return match ? match[0] : "";
-        }
+        function isLevel(val) { return /^(?:lv\.?\s*)?\d+$/i.test(String(val || "").trim()); }
+        function normalizeLevel(val) { const match = String(val || "").trim().match(/\d+/); return match ? match[0] : ""; }
 
         function getPlayerLevel(player) {
             if (!player) return "";
-            const possibleFields = [
-                player.level, player.lv, player["等級"],
-                player.levelText, player.levelDisplay,
-                player.levelNumber, player.levelValue, player["等級數字"]
-            ];
-            for (const value of possibleFields) {
-                if (isLevel(value)) {
-                    const level = normalizeLevel(value);
-                    if (level) return level;
-                }
+            for (const v of [player.level, player.lv, player["等級"], player.levelText]) {
+                if (isLevel(v)) return normalizeLevel(v);
             }
             return "";
         }
 
         function normalizeAvailabilityArray(arr) {
-            const defaultArr = ["", "", "", "", "", "", ""];
-            if (!Array.isArray(arr)) return defaultArr;
-            return defaultArr.map((_, i) => typeof arr[i] === "string" ? arr[i] : "");
+            const def = ["", "", "", "", "", "", ""];
+            return Array.isArray(arr) ? def.map((_, i) => typeof arr[i] === "string" ? arr[i] : "") : def;
         }
 
-        function normalizePlayerAvailability(availObjOrArr, activeWeekKey) {
-            if (Array.isArray(availObjOrArr)) {
-                return {
-                    [activeWeekKey]: normalizeAvailabilityArray(availObjOrArr)
-                };
-            }
-            if (availObjOrArr && typeof availObjOrArr === "object") {
+        function normalizePlayerAvailability(avail, wk) {
+            if (Array.isArray(avail)) return { [wk]: normalizeAvailabilityArray(avail) };
+            if (avail && typeof avail === "object") {
                 const res = {};
-                for (const wk in availObjOrArr) {
-                    res[wk] = normalizeAvailabilityArray(availObjOrArr[wk]);
-                }
+                for (const k in avail) res[k] = normalizeAvailabilityArray(avail[k]);
                 return res;
             }
-            return {
-                [activeWeekKey]: ["", "", "", "", "", "", ""]
-            };
+            return { [wk]: ["", "", "", "", "", "", ""] };
         }
 
-        function getPlayerWeekAvailability(player, weekKey) {
+        function getPlayerWeekAvailability(player, wk) {
             if (!player || !player.availability) return ["", "", "", "", "", "", ""];
-            if (Array.isArray(player.availability)) {
-                return normalizeAvailabilityArray(player.availability);
-            }
-            if (typeof player.availability === "object") {
-                return normalizeAvailabilityArray(player.availability[weekKey]);
-            }
-            return ["", "", "", "", "", "", ""];
+            if (Array.isArray(player.availability)) return normalizeAvailabilityArray(player.availability);
+            return normalizeAvailabilityArray(player.availability[wk]);
         }
 
         function normalizePlayer(player, activeWeekKey) {
             if (!player || typeof player !== "object") return null;
-            const currentWeekKey = activeWeekKey || formatDateKey(getTuesdayOfWeek());
-            
-            const result = {
+            const wk = activeWeekKey || formatDateKey(getTuesdayOfWeek());
+            const res = {
                 id: String(player.id || makeId()),
                 level: getPlayerLevel(player),
                 name: String(player.name || player["名稱"] || player["名字"] || "").trim(),
                 job: String(player.job || player["職業"] || "").trim(),
-                position: String(player.position || player["AD/AP"] || player["位置"] || "").trim(),
+                position: String(player.position || player["AD/AP"] || "").trim(),
                 rounds: String(player.rounds || "7").trim(),
                 groupId: String(player.groupId || "").trim(),
-                availability: normalizePlayerAvailability(player.availability, currentWeekKey),
+                part: String(player.part || ""),
+                availability: normalizePlayerAvailability(player.availability, wk),
                 note: String(player.note || player["備註"] || "").trim()
             };
-
-            if (!player.position && !player["AD/AP"] && !player["位置"] && result.job) {
-                const match = result.job.match(/^(.*?)\s*\((.*?)\)\s*$/);
-                if (match) {
-                    result.job = match[1].trim();
-                    result.position = match[2].trim();
-                }
-            }
-            return result;
+            return res;
         }
 
-        function normalizeWeekGroupData(weekData, weekKey) {
-            if (!weekData || typeof weekData !== "object") {
-                return { groups: createDefaultWeekGroups(weekKey) };
-            }
-            let groups = Array.isArray(weekData.groups) ? weekData.groups.slice(0, MAX_GROUPS) : [];
-            const defaultGroups = createDefaultWeekGroups(weekKey);
+        function normalizeWeekGroupData(weekData, wk) {
+            let groups = Array.isArray(weekData?.groups) ? weekData.groups.slice(0, MAX_GROUPS) : [];
+            const defGroups = createDefaultWeekGroups(wk);
+            while (groups.length < MAX_GROUPS) groups.push(defGroups[groups.length]);
 
-            while (groups.length < MAX_GROUPS) {
-                groups.push(defaultGroups[groups.length]);
-            }
-
-            groups = groups.map((group, idx) => {
-                if (!group || typeof group !== "object") return defaultGroups[idx];
-                
-                let teams = [];
-                // 相容舊版本的 team1/team2/team3 資料結構轉換
-                if (Array.isArray(group.teams)) {
-                    teams = group.teams.map((t, tIdx) => ({
-                        name: `第${tIdx + 1}隊`,
-                        emoji: t.emoji || "⚔️",
-                        time: t.time || "20:00",
-                        con: Boolean(t.con),
-                        members: Array.isArray(t.members) ? t.members.map(p => normalizePlayer(p, weekKey)).filter(Boolean) : []
-                    }));
-                } else {
-                    teams = [
-                        { name: "第1隊", emoji: "⚔️", time: group.time1 || group.time || "20:00", con: Boolean(group.con1), members: Array.isArray(group.team1) ? group.team1.map(p => normalizePlayer(p, weekKey)).filter(Boolean) : [] },
-                        { name: "第2隊", emoji: "⚔️", time: group.time2 || group.time || "20:00", con: Boolean(group.con2), members: Array.isArray(group.team2) ? group.team2.map(p => normalizePlayer(p, weekKey)).filter(Boolean) : [] },
-                        { name: "第3隊", emoji: "⚔️", time: group.time3 || group.time || "20:00", con: Boolean(group.con3), members: Array.isArray(group.team3) ? group.team3.map(p => normalizePlayer(p, weekKey)).filter(Boolean) : [] }
-                    ];
-                }
-
-                if (teams.length === 0) {
-                    teams = createDefaultTeams();
-                }
-
-                return {
-                    teams,
-                    date: typeof group.date === "string" && group.date ? group.date : defaultGroups[idx].date
-                };
+            groups = groups.map((g, idx) => {
+                let teams = Array.isArray(g?.teams) ? g.teams.map((t, tIdx) => ({
+                    name: t.name || `第${tIdx + 1}隊`,
+                    emoji: t.emoji || "⚔️",
+                    time: t.time || "20:00",
+                    con: Boolean(t.con),
+                    members: Array.isArray(t.members) ? t.members.map(p => normalizePlayer(p, wk)).filter(Boolean) : []
+                })) : createDefaultTeams();
+                return { teams, date: typeof g?.date === "string" && g.date ? g.date : defGroups[idx].date };
             });
-
             return { groups };
         }
 
         function normalizeFirebaseData(data) {
             const defaultWeekKey = formatDateKey(getTuesdayOfWeek());
-
-            if (!data || typeof data !== "object") {
-                return createEmptyFirebaseData();
-            }
-
+            if (!data || typeof data !== "object") return createEmptyFirebaseData();
             let activeWeek = typeof data.activeWeek === "string" && data.activeWeek ? data.activeWeek : defaultWeekKey;
-
             let weeksData = {};
             if (data.weeksData && typeof data.weeksData === "object") {
-                for (const wk in data.weeksData) {
-                    weeksData[wk] = normalizeWeekGroupData(data.weeksData[wk], wk);
-                }
-            } else if (Array.isArray(data.groups)) {
-                weeksData[defaultWeekKey] = normalizeWeekGroupData({ groups: data.groups }, defaultWeekKey);
+                for (const wk in data.weeksData) weeksData[wk] = normalizeWeekGroupData(data.weeksData[wk], wk);
             }
-
-            if (!weeksData[activeWeek]) {
-                weeksData[activeWeek] = { groups: createDefaultWeekGroups(activeWeek) };
-            }
-
-            const pool = Array.isArray(data.pool)
-                ? data.pool.map(p => normalizePlayer(p, activeWeek)).filter(Boolean)
-                : [];
-
-            return {
-                activeWeek,
-                weeksData,
-                pool
-            };
+            if (!weeksData[activeWeek]) weeksData[activeWeek] = { groups: createDefaultWeekGroups(activeWeek) };
+            const pool = Array.isArray(data.pool) ? data.pool.map(p => normalizePlayer(p, activeWeek)).filter(Boolean) : [];
+            return { activeWeek, weeksData, pool };
         }
 
         function applyFirebaseDataToLocal(data) {
-            const normalized = normalizeFirebaseData(data);
-            const activeGroup = Math.min(
-                Math.max(Number.isInteger(state.activeGroup) ? state.activeGroup : 0, 0),
-                MAX_GROUPS - 1
-            );
+            const norm = normalizeFirebaseData(data);
             state = {
-                activeWeek: normalized.activeWeek,
-                activeGroup,
+                activeWeek: norm.activeWeek,
+                activeGroup: Math.min(Math.max(state.activeGroup || 0, 0), MAX_GROUPS - 1),
                 filterAvailableOnly: typeof state.filterAvailableOnly === "boolean" ? state.filterAvailableOnly : true,
-                pool: normalized.pool,
-                weeksData: normalized.weeksData
+                pool: norm.pool,
+                weeksData: norm.weeksData
             };
         }
 
-        function currentWeekData() {
-            if (!state.weeksData || !state.weeksData[state.activeWeek]) {
-                return { groups: createDefaultWeekGroups(state.activeWeek) };
-            }
-            return state.weeksData[state.activeWeek];
-        }
-
-        function currentGroup() {
-            const wData = currentWeekData();
-            return wData.groups[state.activeGroup] || { teams: createDefaultTeams(), date: "" };
-        }
+        function currentWeekData() { return state.weeksData[state.activeWeek] || { groups: createDefaultWeekGroups(state.activeWeek) }; }
+        function currentGroup() { return currentWeekData().groups[state.activeGroup] || { teams: createDefaultTeams(), date: "" }; }
 
         function saveLocalState() {
-            try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify({
-                    activeWeek: state.activeWeek,
-                    pool: state.pool,
-                    weeksData: state.weeksData
-                }));
-            } catch (error) {
-                console.error("LocalStorage 儲存失敗：", error);
-            }
-        }
-
-        function loadLocalState() {
-            try {
-                const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
-                applyFirebaseDataToLocal(saved);
-            } catch (error) {
-                applyFirebaseDataToLocal(null);
-            }
-            render();
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ activeWeek: state.activeWeek, pool: state.pool, weeksData: state.weeksData })); } catch(e) {}
         }
 
         async function transactionUpdate(mutator) {
             if (!firebaseEnabled) {
-                const localData = normalizeFirebaseData({
-                    activeWeek: state.activeWeek,
-                    pool: state.pool,
-                    weeksData: state.weeksData
-                });
-                const changed = mutator(localData);
-                if (changed !== false) {
-                    applyFirebaseDataToLocal(localData);
-                    saveLocalState();
-                    render();
-                }
+                const local = normalizeFirebaseData(state);
+                if (mutator(local) !== false) { applyFirebaseDataToLocal(local); saveLocalState(); render(); }
                 return;
             }
-
             try {
                 const ref = database.ref(FIREBASE_PATH);
-                const result = await ref.transaction(currentData => {
-                    if (currentData === null) {
-                        const fresh = createEmptyFirebaseData();
-                        const changed = mutator(fresh);
-                        return changed === false ? null : fresh;
-                    }
-
-                    const latest = normalizeFirebaseData(currentData);
-                    const changed = mutator(latest);
-                    return changed === false ? currentData : latest;
+                const res = await ref.transaction(cur => {
+                    const latest = normalizeFirebaseData(cur);
+                    return mutator(latest) === false ? cur : latest;
                 });
-
-                if (result && result.snapshot) {
-                    applyFirebaseDataToLocal(result.snapshot.val());
-                    render();
-                }
-            } catch (error) {
-                console.error("Firebase transaction 失敗：", error);
-                alert("資料同步失敗，請確認 Firebase 連線。");
-            }
+                if (res?.snapshot) { applyFirebaseDataToLocal(res.snapshot.val()); render(); }
+            } catch(err) { alert("資料同步失敗"); }
         }
 
         function initFirebaseListener() {
-            if (!firebaseEnabled) {
-                loadLocalState();
-                return;
-            }
-
-            database.ref(FIREBASE_PATH).on("value", snapshot => {
-                applyFirebaseDataToLocal(snapshot.val());
-                render();
-            }, error => {
-                console.error("Firebase 讀取失敗：", error);
-                setSyncStatus("⚠ Firebase 讀取失敗", "text-[11px] text-rose-400");
-            });
-
-            database.ref(FIREBASE_PATH).transaction(currentData => {
-                return currentData === null ? createEmptyFirebaseData() : currentData;
-            }).catch(error => {
-                console.error("Firebase 初始化資料失敗：", error);
-            });
+            if (!firebaseEnabled) { loadLocalState(); return; }
+            database.ref(FIREBASE_PATH).on("value", snap => { applyFirebaseDataToLocal(snap.val()); render(); });
+            database.ref(FIREBASE_PATH).transaction(cur => cur === null ? createEmptyFirebaseData() : cur);
         }
 
-        // ==================== 8. 互動事件處理函式 ====================
+        function loadLocalState() {
+            try { applyFirebaseDataToLocal(JSON.parse(localStorage.getItem(STORAGE_KEY))); } catch(e) { applyFirebaseDataToLocal(null); }
+            render();
+        }
+
         function getAvailableWeekKeys() {
-            const keysSet = new Set(Object.keys(state.weeksData || {}));
-            const baseTue = getTuesdayOfWeek();
-            for (let offset = -1; offset <= 2; offset++) {
-                const d = new Date(baseTue);
-                d.setDate(d.getDate() + offset * 7);
-                keysSet.add(formatDateKey(d));
+            const set = new Set(Object.keys(state.weeksData || {}));
+            const base = getTuesdayOfWeek();
+            for (let i = -1; i <= 2; i++) {
+                const d = new Date(base); d.setDate(d.getDate() + i * 7);
+                set.add(formatDateKey(d));
             }
-            return Array.from(keysSet).sort();
+            return Array.from(set).sort();
         }
 
-        function selectWeek(weekKey) {
-            if (!weekKey) return;
+        function selectWeek(wk) {
+            if (!wk) return;
             transactionUpdate(data => {
-                data.activeWeek = weekKey;
-                if (!data.weeksData) data.weeksData = {};
-                if (!data.weeksData[weekKey]) {
-                    data.weeksData[weekKey] = { groups: createDefaultWeekGroups(weekKey) };
-                }
+                data.activeWeek = wk;
+                if (!data.weeksData[wk]) data.weeksData[wk] = { groups: createDefaultWeekGroups(wk) };
                 return true;
             });
         }
 
         function switchWeekRelative(delta) {
-            const parts = state.activeWeek.split('-').map(Number);
-            const currTue = (parts.length === 3) ? new Date(parts[0], parts[1] - 1, parts[2]) : getTuesdayOfWeek();
-            currTue.setDate(currTue.getDate() + delta * 7);
-            const targetKey = formatDateKey(currTue);
-            selectWeek(targetKey);
+            const [y, m, d] = state.activeWeek.split('-').map(Number);
+            const t = y ? new Date(y, m - 1, d) : getTuesdayOfWeek();
+            t.setDate(t.getDate() + delta * 7);
+            selectWeek(formatDateKey(t));
         }
 
-        function jumpToCurrentWeek() {
-            const thisTueKey = formatDateKey(getTuesdayOfWeek());
-            selectWeek(thisTueKey);
-        }
+        function jumpToCurrentWeek() { selectWeek(formatDateKey(getTuesdayOfWeek())); }
 
         function deleteCurrentWeek() {
-            const targetWeek = state.activeWeek;
-            if (!isTwoWeeksAgoOrEarlier(targetWeek)) return;
-
-            const title = getWeekDisplayTitle(targetWeek);
-            if (!confirm(`確定要刪除「${title}」的週別資料嗎？\n\n刪除後該週的隊伍分配與時間填寫紀錄將被清除，此操作無法復原。`)) {
-                return;
-            }
-
-            const thisTueKey = formatDateKey(getTuesdayOfWeek());
-
+            const wk = state.activeWeek;
+            if (!isTwoWeeksAgoOrEarlier(wk) || !confirm(`確定要刪除「${getWeekDisplayTitle(wk)}」的週別資料嗎？`)) return;
             transactionUpdate(data => {
-                if (data.weeksData && data.weeksData[targetWeek]) {
-                    delete data.weeksData[targetWeek];
-                }
-
-                if (data.pool) {
-                    data.pool.forEach(player => {
-                        if (player.availability && typeof player.availability === 'object' && !Array.isArray(player.availability)) {
-                            delete player.availability[targetWeek];
-                        }
-                    });
-                }
-
-                data.activeWeek = thisTueKey;
-                if (!data.weeksData[thisTueKey]) {
-                    data.weeksData[thisTueKey] = { groups: createDefaultWeekGroups(thisTueKey) };
-                }
+                delete data.weeksData[wk];
+                data.activeWeek = formatDateKey(getTuesdayOfWeek());
+                if (!data.weeksData[data.activeWeek]) data.weeksData[data.activeWeek] = { groups: createDefaultWeekGroups(data.activeWeek) };
                 return true;
             });
         }
 
-        function switchTab(tab) {
-            currentTab = tab;
-            render();
-        }
+        function switchTab(tab) { currentTab = tab; render(); }
+        function selectGroup(idx) { state.activeGroup = idx; render(); }
+        function toggleFilterAvailable() { state.filterAvailableOnly = !state.filterAvailableOnly; render(); }
 
-        function selectGroup(index) {
-            if (index < 0 || index >= MAX_GROUPS) return;
-            state.activeGroup = index;
-            render();
-        }
-
-        function toggleFilterAvailable() {
-            state.filterAvailableOnly = !state.filterAvailableOnly;
-            render();
-        }
-
-        // 動態新增隊伍功能
         function addTeamToCurrentGroup() {
-            const activeWeekKey = state.activeWeek;
-            const groupIndex = state.activeGroup;
             transactionUpdate(data => {
-                if (!data.weeksData || !data.weeksData[activeWeekKey]) return false;
-                const group = data.weeksData[activeWeekKey].groups[groupIndex];
-                if (!group) return false;
-                if (!Array.isArray(group.teams)) group.teams = createDefaultTeams();
-                
-                const newTeamNum = group.teams.length + 1;
-                group.teams.push({
-                    name: `第${newTeamNum}隊`,
-                    emoji: "⚔️",
-                    time: "20:00",
-                    con: false,
-                    members: []
-                });
+                const g = data.weeksData[state.activeWeek].groups[state.activeGroup];
+                g.teams.push({ name: `第${g.teams.length + 1}隊`, emoji: "⚔️", time: "20:00", con: false, members: [] });
                 return true;
             });
         }
 
-        // 動態減少隊伍功能
         function removeTeamFromCurrentGroup() {
-            const activeWeekKey = state.activeWeek;
-            const groupIndex = state.activeGroup;
             transactionUpdate(data => {
-                if (!data.weeksData || !data.weeksData[activeWeekKey]) return false;
-                const group = data.weeksData[activeWeekKey].groups[groupIndex];
-                if (!group || !Array.isArray(group.teams)) return false;
-                if (group.teams.length <= 1) {
-                    alert("至少需保留一支隊伍！");
-                    return false;
-                }
-                const removedTeam = group.teams.pop();
-                // 若被刪除的隊伍中有成員，可選擇提示或直接保留在雲端（此處直接移除該隊伍陣容）
+                const g = data.weeksData[state.activeWeek].groups[state.activeGroup];
+                if (g.teams.length <= 1) { alert("至少需保留一支隊伍！"); return false; }
+                g.teams.pop();
                 return true;
             });
         }
 
-        function updateTeamTime(teamIndex, time) {
-            const activeWeekKey = state.activeWeek;
-            const groupIndex = state.activeGroup;
+        function updateTeamTime(tIdx, time) {
+            transactionUpdate(data => { data.weeksData[state.activeWeek].groups[state.activeGroup].teams[tIdx].time = String(time || "20:00"); return true; });
+        }
+
+        function updateTeamCon(tIdx, con) {
+            transactionUpdate(data => { data.weeksData[state.activeWeek].groups[state.activeGroup].teams[tIdx].con = Boolean(con); return true; });
+        }
+
+        function updateTeamMemberPart(tIdx, mIdx, part) {
             transactionUpdate(data => {
-                if (!data.weeksData || !data.weeksData[activeWeekKey]) return false;
-                const group = data.weeksData[activeWeekKey].groups[groupIndex];
-                if (!group || !group.teams || !group.teams[teamIndex]) return false;
-                group.teams[teamIndex].time = String(time || "20:00").trim();
+                const m = data.weeksData[state.activeWeek].groups[state.activeGroup].teams[tIdx].members[mIdx];
+                m.part = (m.part === part) ? "" : part;
                 return true;
             });
         }
 
-        function updateTeamCon(teamIndex, checked) {
-            const activeWeekKey = state.activeWeek;
-            const groupIndex = state.activeGroup;
-            transactionUpdate(data => {
-                if (!data.weeksData || !data.weeksData[activeWeekKey]) return false;
-                const group = data.weeksData[activeWeekKey].groups[groupIndex];
-                if (!group || !group.teams || !group.teams[teamIndex]) return false;
-                group.teams[teamIndex].con = Boolean(checked);
-                return true;
-            });
-        }
-
-        function updateGroupDate(index, date) {
-            const activeWeekKey = state.activeWeek;
-            transactionUpdate(data => {
-                if (!data.weeksData || !data.weeksData[activeWeekKey]) return false;
-                const group = data.weeksData[activeWeekKey].groups[index];
-                if (!group) return false;
-                group.date = String(date || "").trim();
-                return true;
-            });
+        function updateGroupDate(idx, date) {
+            transactionUpdate(data => { data.weeksData[state.activeWeek].groups[idx].date = String(date); return true; });
         }
 
         function getWeekday(date) {
-            if (!date) return "";
             const parts = String(date).split("/");
             if (parts.length < 2) return "";
-            const month = Number(parts[0]);
-            const day = Number(parts[1]);
-            const year = new Date().getFullYear();
-            const d = new Date(year, month - 1, day);
-            if (d.getMonth() !== month - 1 || d.getDate() !== day) return "";
-            const weekdays = ["日", "一", "二", "三", "四", "五", "六"];
-            return weekdays[d.getDay()];
+            const d = new Date(new Date().getFullYear(), Number(parts[0]) - 1, Number(parts[1]));
+            return isNaN(d) ? "" : ["日", "一", "二", "三", "四", "五", "六"][d.getDay()];
         }
 
-        function updatePlayerField(playerId, field, value) {
-            const normalizedValue = field === "level" ? normalizeLevel(value) : String(value || "");
-
+        function updatePlayerField(id, field, val) {
+            const norm = field === "level" ? normalizeLevel(val) : String(val);
             transactionUpdate(data => {
-                const poolPlayer = data.pool.find(p => String(p.id) === String(playerId));
-                if (poolPlayer) {
-                    poolPlayer[field] = normalizedValue;
-                }
-
-                if (data.weeksData) {
-                    for (const wk in data.weeksData) {
-                        const wData = data.weeksData[wk];
-                        if (wData && wData.groups) {
-                            wData.groups.forEach(group => {
-                                const teams = group.teams || [];
-                                teams.forEach(team => {
-                                    if (team && team.members) {
-                                        team.members.forEach(teamPlayer => {
-                                            if (String(teamPlayer.id) === String(playerId)) {
-                                                teamPlayer[field] = normalizedValue;
-                                            }
-                                        });
-                                    }
-                                });
-                            });
-                        }
-                    }
+                const p = data.pool.find(item => String(item.id) === String(id));
+                if (p) p[field] = norm;
+                for (const wk in data.weeksData) {
+                    (data.weeksData[wk].groups || []).forEach(g => {
+                        (g.teams || []).forEach(t => {
+                            (t.members || []).forEach(m => { if (String(m.id) === String(id)) m[field] = norm; });
+                        });
+                    });
                 }
                 return true;
             });
         }
 
-        function updatePlayerAvailability(playerId, dayIndex, value) {
-            const currentWeekKey = state.activeWeek;
+        function updatePlayerAvailability(id, dayIdx, val) {
+            const wk = state.activeWeek;
             transactionUpdate(data => {
-                const updateTarget = (p) => {
-                    if (!p.availability) p.availability = {};
-                    if (Array.isArray(p.availability)) {
-                        p.availability = { [currentWeekKey]: [...p.availability] };
-                    }
-                    if (!p.availability[currentWeekKey]) {
-                        p.availability[currentWeekKey] = ["", "", "", "", "", "", ""];
-                    }
-                    p.availability[currentWeekKey][dayIndex] = String(value || "");
+                const update = (p) => {
+                    if (!p.availability || Array.isArray(p.availability)) p.availability = { [wk]: ["", "", "", "", "", "", ""] };
+                    if (!p.availability[wk]) p.availability[wk] = ["", "", "", "", "", "", ""];
+                    p.availability[wk][dayIdx] = String(val);
                 };
-
-                const poolPlayer = data.pool.find(p => String(p.id) === String(playerId));
-                if (poolPlayer) updateTarget(poolPlayer);
-
-                if (data.weeksData) {
-                    for (const wk in data.weeksData) {
-                        const wData = data.weeksData[wk];
-                        if (wData && wData.groups) {
-                            wData.groups.forEach(group => {
-                                const teams = group.teams || [];
-                                teams.forEach(team => {
-                                    if (team && team.members) {
-                                        team.members.forEach(teamPlayer => {
-                                            if (String(teamPlayer.id) === String(playerId)) {
-                                                updateTarget(teamPlayer);
-                                            }
-                                        });
-                                    }
-                                });
-                            });
-                        }
-                    }
+                const p = data.pool.find(item => String(item.id) === String(id));
+                if (p) update(p);
+                for (const w in data.weeksData) {
+                    (data.weeksData[w].groups || []).forEach(g => {
+                        (g.teams || []).forEach(t => {
+                            (t.members || []).forEach(m => { if (String(m.id) === String(id)) update(m); });
+                        });
+                    });
                 }
                 return true;
             });
         }
 
         function addEmptyPoolPlayer() {
-            const currentWeekKey = state.activeWeek;
-            const newPlayer = {
-                id: makeId(),
-                level: "",
-                name: "",
-                job: "",
-                position: "",
-                rounds: "7",
-                groupId: "",
-                availability: {
-                    [currentWeekKey]: ["", "", "", "", "", "", ""]
-                },
-                note: ""
-            };
-
             transactionUpdate(data => {
-                data.pool.push(newPlayer);
+                data.pool.push({
+                    id: makeId(), level: "", name: "", job: "", position: "", rounds: "7", groupId: "", part: "",
+                    availability: { [state.activeWeek]: ["", "", "", "", "", "", ""] }, note: ""
+                });
                 return true;
             });
         }
 
-        function deletePoolPlayer(playerId) {
-            const player = state.pool.find(p => String(p.id) === String(playerId));
-            if (!player) return;
-            const name = player.name || "未命名玩家";
-            if (!confirm(`確定要刪除「${name}」嗎？\n這將會同步從所有週別與隊伍中刪除此成員。`)) return;
-
+        function deletePoolPlayer(id) {
+            if (!confirm("確定要刪除此成員嗎？")) return;
             transactionUpdate(data => {
-                data.pool = data.pool.filter(item => String(item.id) !== String(playerId));
-                
-                if (data.weeksData) {
-                    for (const wk in data.weeksData) {
-                        const wData = data.weeksData[wk];
-                        if (wData && wData.groups) {
-                            wData.groups.forEach(g => {
-                                const teams = g.teams || [];
-                                teams.forEach(team => {
-                                    if (team && team.members) {
-                                        team.members = team.members.filter(item => String(item.id) !== String(playerId));
-                                    }
-                                });
-                            });
-                        }
-                    }
+                data.pool = data.pool.filter(p => String(p.id) !== String(id));
+                for (const wk in data.weeksData) {
+                    (data.weeksData[wk].groups || []).forEach(g => {
+                        (g.teams || []).forEach(t => { t.members = (t.members || []).filter(m => String(m.id) !== String(id)); });
+                    });
                 }
-
                 return true;
             });
         }
 
-        function sendToTeam(playerId, teamIndex) {
-            const player = state.pool.find(p => String(p.id) === String(playerId));
-            if (!player) return;
-            const activeWeekKey = state.activeWeek;
-            const groupIndex = state.activeGroup;
-
+        function sendToTeam(id, tIdx) {
             transactionUpdate(data => {
-                if (!data.weeksData || !data.weeksData[activeWeekKey]) return false;
-                const weekData = data.weeksData[activeWeekKey];
-                const group = weekData.groups[groupIndex];
-                if (!group || !group.teams || !group.teams[teamIndex]) return false;
-                
-                if (hasReachedWeeklyLimit(player, weekData)) {
-                    const rounds = String(player.rounds || "7");
-                    const limitText = rounds === "14" ? "2個隊伍" : "1個隊伍";
-                    alert(`「${player.name || '此玩家'}」設定為 ${rounds}場，本週已達上限（只能在 ${limitText} 上），無法再加入！`);
-                    return false;
-                }
-
-                const targetTeam = group.teams[teamIndex];
-                if (!targetTeam.members) targetTeam.members = [];
-
-                if (targetTeam.members.length >= MAX_TEAM_SIZE) {
-                    alert(`${targetTeam.name}名額已滿！`);
-                    return false;
-                }
-
-                if (targetTeam.members.some(item => String(item.id) === String(player.id))) {
-                    alert(`「${player.name || '此玩家'}」已經在該隊伍中！`);
-                    return false;
-                }
-
-                targetTeam.members.push({ ...player });
+                const p = data.pool.find(item => String(item.id) === String(id));
+                const wData = data.weeksData[state.activeWeek];
+                const targetTeam = wData.groups[state.activeGroup].teams[tIdx];
+                if (hasReachedWeeklyLimit(p, wData)) { alert("此玩家本週已達出賽上限！"); return false; }
+                if (targetTeam.members.some(m => String(m.id) === String(id))) return false;
+                targetTeam.members.push({ ...p });
                 return true;
             });
         }
 
-        function removeFromTeam(teamIndex, memberIndex) {
-            const activeWeekKey = state.activeWeek;
-            const groupIndex = state.activeGroup;
-            transactionUpdate(data => {
-                if (!data.weeksData || !data.weeksData[activeWeekKey]) return false;
-                const group = data.weeksData[activeWeekKey].groups[groupIndex];
-                if (!group || !group.teams || !group.teams[teamIndex] || !group.teams[teamIndex].members) return false;
-                group.teams[teamIndex].members.splice(memberIndex, 1);
-                return true;
-            });
+        function removeFromTeam(tIdx, mIdx) {
+            transactionUpdate(data => { data.weeksData[state.activeWeek].groups[state.activeGroup].teams[tIdx].members.splice(mIdx, 1); return true; });
         }
 
         function clearCurrentGroup() {
-            const activeWeekKey = state.activeWeek;
-            const groupIndex = state.activeGroup;
-            const group = currentGroup();
-            if (!group) return;
-
-            let total = 0;
-            (group.teams || []).forEach(t => { total += (t.members?.length || 0); });
-
-            const groupName = GROUP_NAMES[groupIndex] || `第 ${groupIndex + 1} 團`;
-            if (!confirm(`確定要清空 ${groupName} 的所有隊伍成員嗎？\n\n目前共有 ${total} 人。\n（總名單不受影響）`)) return;
-
+            if (!confirm("確定要清空當前團的所有隊伍成員嗎？")) return;
             transactionUpdate(data => {
-                if (!data.weeksData || !data.weeksData[activeWeekKey]) return false;
-                const target = data.weeksData[activeWeekKey].groups[groupIndex];
-                if (!target || !target.teams) return false;
-                target.teams.forEach(team => {
-                    team.members = [];
-                    team.time = "20:00";
-                    team.con = false;
-                });
+                (data.weeksData[state.activeWeek].groups[state.activeGroup].teams || []).forEach(t => { t.members = []; t.time = "20:00"; t.con = false; });
                 return true;
             });
         }
 
         function clearAllData() {
-            if (!confirm("確定要清空全部資料（含總名單與所有週別隊伍）嗎？\n\n清空後會恢復成預設空白。")) return;
-
-            const defaultWeekKey = formatDateKey(getTuesdayOfWeek());
+            if (!confirm("確定要清空全部資料嗎？")) return;
+            const defKey = formatDateKey(getTuesdayOfWeek());
             transactionUpdate(data => {
-                data.pool = [];
-                data.activeWeek = defaultWeekKey;
-                data.weeksData = {
-                    [defaultWeekKey]: { groups: createDefaultWeekGroups(defaultWeekKey) }
-                };
+                data.pool = []; data.activeWeek = defKey;
+                data.weeksData = { [defKey]: { groups: createDefaultWeekGroups(defKey) } };
                 return true;
-            }).then(() => {
-                state.activeGroup = 0;
-                render();
             });
         }
 
-        // ==================== 9. UI 渲染函式 ====================
-        function escapeHtml(value) {
-            return String(value ?? "")
-                .replaceAll("&", "&amp;")
-                .replaceAll("<", "&lt;")
-                .replaceAll(">", "&gt;")
-                .replaceAll('"', "&quot;")
-                .replaceAll("'", "&#039;");
+        function escapeHtml(str) {
+            return String(str ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
         }
 
         function renderAvailabilitySelects(player) {
-            const availArr = getPlayerWeekAvailability(player, state.activeWeek);
-            return WEEKDAYS.map((day, i) => {
-                const val = availArr[i] || "";
-                return `
-                    <div class="flex flex-col items-center">
-                        <span class="text-[10px] text-blue-400 font-semibold mb-0.5">${day}</span>
-                        <select onchange="updatePlayerAvailability('${player.id}', ${i}, this.value)" class="w-16 rounded border border-slate-800 bg-slate-900 px-0.5 py-0.5 text-[11px] text-slate-200 focus:border-blue-500 focus:outline-none">
-                            <option value="" ${val === "" ? "selected" : ""}></option>
-                            <option value="20:00~" ${val === "20:00~" ? "selected" : ""}>20:00~</option>
-                            <option value="21:00~" ${val === "21:00~" ? "selected" : ""}>21:00~</option>
-                        </select>
-                    </div>
-                `;
-            }).join("");
+            const avail = getPlayerWeekAvailability(player, state.activeWeek);
+            return WEEKDAYS.map((day, i) => `
+                <div class="flex flex-col items-center">
+                    <span class="text-[10px] text-blue-400 font-semibold mb-0.5">${day}</span>
+                    <select onchange="updatePlayerAvailability('${player.id}', ${i}, this.value)" class="w-16 rounded border border-slate-800 bg-slate-900 px-0.5 py-0.5 text-[11px] text-slate-200">
+                        <option value="" ${!avail[i] ? "selected" : ""}></option>
+                        <option value="20:00~" ${avail[i] === "20:00~" ? "selected" : ""}>20:00~</option>
+                        <option value="21:00~" ${avail[i] === "21:00~" ? "selected" : ""}>21:00~</option>
+                    </select>
+                </div>
+            `).join("");
         }
 
-        function memberCard(player, index, teamIndex) {
-            const level = getPlayerLevel(player);
-            const jobColorClass = getJobColorClass(player.job);
-
+        function memberCard(player, idx, tIdx) {
             return `
-                <div data-id="${escapeHtml(player.id)}" class="drag-item flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950 p-2.5 transition hover:border-slate-700">
-                    <div class="min-w-0 pr-1 flex-1">
-                        <div class="flex items-center gap-1.5 flex-wrap">
-                            <span class="text-xs font-semibold text-slate-500 select-none">#${index + 1}</span>
-                            <div class="flex items-center">
-                                <span class="text-xs text-slate-500 select-none">Lv.</span>
-                                <input type="text" value="${escapeHtml(level)}" placeholder="-" maxlength="3" inputmode="numeric" onchange="updatePlayerField('${player.id}', 'level', this.value)" class="w-8 rounded border border-slate-800 bg-slate-900 px-1 py-0.5 text-center text-xs font-semibold text-blue-400 focus:border-blue-500 focus:outline-none" title="點擊修改等級">
-                            </div>
-                            <select onchange="updatePlayerField('${player.id}', 'job', this.value)" class="w-20 rounded border px-1 py-0.5 text-xs transition-colors focus:border-blue-500 focus:outline-none ${jobColorClass}" title="選擇職業">
-                                ${renderJobSelectOptions(player.job)}
-                            </select>
-                            <input type="text" value="${escapeHtml(player.name)}" placeholder="名字" onchange="updatePlayerField('${player.id}', 'name', this.value)" class="w-20 rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-xs font-bold text-slate-200 focus:border-blue-500 focus:outline-none" title="點擊修改名字">
-                            <input type="text" value="${escapeHtml(player.position)}" placeholder="AD/AP" onchange="updatePlayerField('${player.id}', 'position', this.value)" class="w-14 rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-300 focus:border-blue-500 focus:outline-none" title="點擊修改 AD/AP">
-                            
-                            <div class="flex items-center gap-1 bg-slate-900/60 p-1 rounded border border-slate-800/80">
-                                ${renderAvailabilitySelects(player)}
-                            </div>
-
-                            <input type="text" value="${escapeHtml(player.note || '')}" placeholder="備註" onchange="updatePlayerField('${player.id}', 'note', this.value)" class="w-40 rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-400 focus:border-blue-500 focus:outline-none" title="點擊修改備註">
+                <div data-id="${escapeHtml(player.id)}" class="drag-item flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950 p-2.5 transition">
+                    <div class="min-w-0 pr-1 flex-1 flex items-center gap-1.5 flex-wrap">
+                        <span class="text-xs text-slate-500">#${idx + 1}</span>
+                        <input type="text" value="${escapeHtml(getPlayerLevel(player))}" maxlength="3" onchange="updatePlayerField('${player.id}', 'level', this.value)" class="w-8 rounded border border-slate-800 bg-slate-900 px-1 py-0.5 text-center text-xs text-blue-400">
+                        <select onchange="updatePlayerField('${player.id}', 'job', this.value)" class="w-20 rounded border px-1 py-0.5 text-xs ${getJobColorClass(player.job)}">
+                            ${renderJobSelectOptions(player.job)}
+                        </select>
+                        <input type="text" value="${escapeHtml(player.name)}" onchange="updatePlayerField('${player.id}', 'name', this.value)" class="w-20 rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-200 font-bold">
+                        <input type="text" value="${escapeHtml(player.position)}" placeholder="AD/AP" onchange="updatePlayerField('${player.id}', 'position', this.value)" class="w-14 rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-300">
+                        
+                        <div class="flex items-center gap-1 bg-purple-950/40 px-2 py-0.5 rounded border border-purple-900/60">
+                            <label class="flex items-center gap-1 text-[11px] text-purple-300 cursor-pointer">
+                                <input type="checkbox" ${player.part === "first" ? "checked" : ""} onchange="updateTeamMemberPart(${tIdx}, ${idx}, 'first')"> 前7
+                            </label>
+                            <label class="flex items-center gap-1 text-[11px] text-purple-300 cursor-pointer ml-1">
+                                <input type="checkbox" ${player.part === "second" ? "checked" : ""} onchange="updateTeamMemberPart(${tIdx}, ${idx}, 'second')"> 後7
+                            </label>
                         </div>
+                        <div class="flex items-center gap-1 bg-slate-900/60 p-1 rounded border border-slate-800">${renderAvailabilitySelects(player)}</div>
+                        <input type="text" value="${escapeHtml(player.note || '')}" placeholder="備註" onchange="updatePlayerField('${player.id}', 'note', this.value)" class="w-28 rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-400">
                     </div>
-                    <div class="flex shrink-0 gap-1 ml-1">
-                        <button onclick="removeFromTeam(${teamIndex}, ${index})" title="從隊伍移除" class="rounded bg-slate-900 border border-slate-800 px-2 py-1 text-xs text-rose-400 hover:bg-rose-950 transition">✕ 退出</button>
-                    </div>
+                    <button onclick="removeFromTeam(${tIdx}, ${idx})" class="rounded bg-slate-900 border border-slate-800 px-2 py-1 text-xs text-rose-400">✕</button>
                 </div>
             `;
         }
 
         function renderTeamsContainer() {
-            const group = currentGroup();
-            const teams = group && Array.isArray(group.teams) ? group.teams : createDefaultTeams();
             let html = "";
-
-            teams.forEach((team, teamIndex) => {
+            (currentGroup().teams || createDefaultTeams()).forEach((team, tIdx) => {
                 const members = team.members || [];
-                const teamTime = team.time || "20:00";
-                const teamCon = Boolean(team.con);
-                const listType = `team_${teamIndex}`;
-
                 html += `
                     <div class="rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-sm">
-                        <div class="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
-                            <div class="flex flex-wrap items-center gap-3">
-                                <h2 class="flex items-center gap-2 text-lg font-bold text-slate-200">
-                                    <span>${team.emoji || "⚔️"}</span>
-                                    ${escapeHtml(team.name || `第${teamIndex+1}隊`)}
-                                    <span class="text-xs font-normal text-slate-500">(上限 6 人)</span>
-                                </h2>
-                                <div class="flex items-center gap-1.5 bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800">
-                                    <span class="text-xs text-slate-400 font-medium">⏰ 時間:</span>
-                                    <input type="text" value="${escapeHtml(teamTime)}" placeholder="20:00" maxlength="5" inputmode="numeric" onchange="updateTeamTime(${teamIndex}, this.value)" class="w-16 rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-center text-xs font-bold text-blue-400 focus:border-blue-500 focus:outline-none" title="設定此隊伍時間">
-                                </div>
-                                <label class="flex items-center gap-1.5 text-xs text-amber-300 bg-amber-950/60 border border-amber-900/50 px-2.5 py-1 rounded-lg cursor-pointer hover:bg-amber-900/40 transition select-none">
-                                    <input type="checkbox" ${teamCon ? "checked" : ""} onchange="updateTeamCon(${teamIndex}, this.checked)" class="rounded border-slate-700 text-amber-600 focus:ring-0">
-                                    <span>連14場</span>
+                        <div class="mb-4 flex items-center justify-between border-b border-slate-800 pb-3">
+                            <div class="flex items-center gap-3 flex-wrap">
+                                <h2 class="flex items-center gap-2 text-lg font-bold text-slate-200"><span>${team.emoji || "⚔️"}</span>${escapeHtml(team.name)}</h2>
+                                <input type="text" value="${escapeHtml(team.time || "20:00")}" maxlength="5" onchange="updateTeamTime(${tIdx}, this.value)" class="w-16 rounded border border-slate-800 bg-slate-900 px-1 py-0.5 text-center text-xs text-blue-400 font-bold">
+                                <label class="flex items-center gap-1 text-xs text-amber-300 bg-amber-950/60 border border-amber-900 px-2.5 py-1 rounded-lg cursor-pointer">
+                                    <input type="checkbox" ${team.con ? "checked" : ""} onchange="updateTeamCon(${tIdx}, this.checked)"> 連14場
                                 </label>
                             </div>
-                            <span class="rounded-full bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-300">${members.length} / 6</span>
+                            <span class="rounded-full bg-slate-800 px-2.5 py-1 text-xs text-slate-300">${members.length} 人</span>
                         </div>
-                        <div id="${listType}-list" data-list-type="${listType}" class="sortable-list grid min-h-[100px] grid-cols-1 gap-3">
+                        <div id="team_${tIdx}-list" data-list-type="team_${tIdx}" class="sortable-list grid min-h-[80px] gap-3">
+                            ${members.length === 0 ? `<p class="text-center text-xs text-slate-500 py-4">此隊伍目前暫無成員</p>` : members.map((m, mIdx) => memberCard(m, mIdx, tIdx)).join("")}
+                        </div>
+                    </div>
                 `;
-
-                for (let i = 0; i < members.length; i++) {
-                    html += memberCard(members[i], i, teamIndex);
-                }
-
-                if (members.length === 0) {
-                    html += `<p class="empty-msg col-span-full py-4 text-center text-xs text-slate-500">此隊伍目前暫無成員（可從下方總名單拖拽加入）。</p>`;
-                }
-
-                html += `</div></div>`;
             });
-
             return html;
         }
 
-        function renderPool(isMasterView = false) {
+        function renderPool(isMasterView) {
             const idSuffix = isMasterView ? "master" : "teams";
-            const currentDayName = WEEKDAYS[state.activeGroup] || "當天";
             const wData = currentWeekData();
-
-            let displayPool = state.pool;
-            
-            displayPool = displayPool.filter(player => !hasReachedWeeklyLimit(player, wData));
-
+            let displayPool = state.pool.filter(p => !hasReachedWeeklyLimit(p, wData));
             if (!isMasterView && state.filterAvailableOnly) {
-                displayPool = displayPool.filter(player => {
-                    const avail = getPlayerWeekAvailability(player, state.activeWeek);
-                    return avail[state.activeGroup] && avail[state.activeGroup].trim() !== "";
+                displayPool = displayPool.filter(p => {
+                    const av = getPlayerWeekAvailability(p, state.activeWeek);
+                    return av[state.activeGroup] && av[state.activeGroup].trim() !== "";
                 });
             }
 
-            const titleText = isMasterView 
-                ? "總名單成員（已排除本週達上限者）" 
-                : `總名單（${state.filterAvailableOnly ? `僅含 ${currentDayName} 有空者` : "全體成員"}・已排除本週達上限者）`;
-
-            const getSortIcon = (field) => {
-                if (poolSortState.field !== field) return '↕️';
-                return poolSortState.direction === 'asc' ? '▲' : '▼';
-            };
-
-            const group = currentGroup();
-            const teams = group && Array.isArray(group.teams) ? group.teams : createDefaultTeams();
+            const getIcon = f => poolSortState.field !== f ? '↕️' : (poolSortState.direction === 'asc' ? '▲' : '▼');
+            const teams = currentGroup().teams || [];
 
             let html = `
                 <div class="rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-sm">
-                    <div class="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
-                        <div class="flex items-center gap-3 flex-wrap">
-                            <h2 class="flex items-center gap-2 text-lg font-bold text-slate-200"><span>👥</span>${titleText}</h2>
-                            ${!isMasterView ? `
-                                <label class="flex items-center gap-1.5 text-xs text-blue-400 bg-blue-950/60 border border-blue-900/50 px-2.5 py-1 rounded-lg cursor-pointer hover:bg-blue-900/40 transition select-none">
-                                    <input type="checkbox" ${state.filterAvailableOnly ? "checked" : ""} onchange="toggleFilterAvailable()" class="rounded border-slate-700 text-blue-600 focus:ring-0">
-                                    <span>僅顯示 ${currentDayName} 有空成員</span>
-                                </label>
-                            ` : ''}
-                        </div>
+                    <div class="mb-4 flex items-center justify-between border-b border-slate-800 pb-3 flex-wrap gap-3">
+                        <h2 class="text-lg font-bold text-slate-200">👥 總名單成員</h2>
                         <div class="flex items-center gap-2 flex-wrap">
-                            <div class="flex items-center gap-1 bg-slate-950/80 p-1 rounded-lg border border-slate-800 text-xs">
-                                <span class="text-slate-400 px-1 font-medium">排序：</span>
-                                <button onclick="sortPoolBy('level')" class="rounded border border-slate-700 bg-slate-800 px-2 py-0.5 text-slate-200 hover:bg-slate-700 transition">
-                                    等級 ${getSortIcon('level')}
-                                </button>
-                                <button onclick="sortPoolBy('job')" class="rounded border border-slate-700 bg-slate-800 px-2 py-0.5 text-slate-200 hover:bg-slate-700 transition">
-                                    職業 ${getSortIcon('job')}
-                                </button>
-                            </div>
-
-                            <button onclick="addEmptyPoolPlayer()" class="rounded-lg border border-blue-600/50 bg-blue-600/20 px-2.5 py-1 text-xs font-semibold text-blue-300 hover:bg-blue-600/40 transition">➕ 新增成員</button>
-                            <span class="rounded-full bg-blue-950 px-2.5 py-1 text-xs font-semibold text-blue-400">
-                                ${displayPool.length} 人
-                            </span>
+                            <button onclick="sortPoolBy('level')" class="rounded border border-slate-700 bg-slate-800 px-2 py-0.5 text-xs text-slate-200">等級 ${getIcon('level')}</button>
+                            <button onclick="sortPoolBy('job')" class="rounded border border-slate-700 bg-slate-800 px-2 py-0.5 text-xs text-slate-200">職業 ${getIcon('job')}</button>
+                            <button onclick="addEmptyPoolPlayer()" class="rounded border border-blue-600 bg-blue-600/20 px-2.5 py-1 text-xs text-blue-300">➕ 新增成員</button>
                         </div>
                     </div>
-                    <div id="pool-list-${idSuffix}" data-list-type="pool" class="sortable-list flex min-h-[100px] flex-col gap-2">
+                    <div id="pool-list-${idSuffix}" data-list-type="pool" class="sortable-list flex flex-col gap-2 min-h-[80px]">
             `;
 
             if (displayPool.length === 0) {
-                html += `<p class="empty-msg py-6 text-center text-sm text-slate-500">目前沒有符合條件可分配的成員（可能皆已達本週出賽上限或無人有空）。</p>`;
+                html += `<p class="text-center text-sm text-slate-500 py-6">目前沒有符合條件可分配的成員</p>`;
             } else {
-                displayPool.forEach((player, index) => {
-                    const level = getPlayerLevel(player);
-                    const jobColorClass = getJobColorClass(player.job);
-                    const roundsVal = player.rounds || "7";
-                    
+                displayPool.forEach((player, idx) => {
                     html += `
-                        <div data-id="${escapeHtml(player.id)}" class="drag-item flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950 p-2.5 text-sm transition hover:border-slate-700">
+                        <div data-id="${escapeHtml(player.id)}" class="drag-item flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950 p-2.5 text-sm">
                             <div class="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
-                                <span class="text-xs font-semibold text-slate-500 select-none">#${index + 1}</span>
-                                <div class="flex items-center">
-                                    <span class="text-xs text-slate-500 select-none">Lv.</span>
-                                    <input type="text" value="${escapeHtml(level)}" placeholder="-" maxlength="3" inputmode="numeric" onchange="updatePlayerField('${player.id}', 'level', this.value)" class="w-8 rounded border border-slate-800 bg-slate-900 px-1 py-0.5 text-center text-xs font-semibold text-blue-400 focus:border-blue-500 focus:outline-none" title="點擊修改等級">
-                                </div>
-                                <select onchange="updatePlayerField('${player.id}', 'job', this.value)" class="w-20 rounded border px-1 py-0.5 text-xs transition-colors focus:border-blue-500 focus:outline-none ${jobColorClass}" title="選擇職業">
+                                <span class="text-xs text-slate-500">#${idx + 1}</span>
+                                <input type="text" value="${escapeHtml(getPlayerLevel(player))}" maxlength="3" onchange="updatePlayerField('${player.id}', 'level', this.value)" class="w-8 rounded border border-slate-800 bg-slate-900 px-1 py-0.5 text-center text-xs text-blue-400">
+                                <select onchange="updatePlayerField('${player.id}', 'job', this.value)" class="w-20 rounded border px-1 py-0.5 text-xs ${getJobColorClass(player.job)}">
                                     ${renderJobSelectOptions(player.job)}
                                 </select>
-                                <input type="text" value="${escapeHtml(player.name)}" placeholder="名字" onchange="updatePlayerField('${player.id}', 'name', this.value)" class="w-20 rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-xs font-bold text-slate-200 focus:border-blue-500 focus:outline-none" title="點擊修改名字">
-                                <input type="text" value="${escapeHtml(player.position)}" placeholder="AD/AP" onchange="updatePlayerField('${player.id}', 'position', this.value)" class="w-14 rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-300 focus:border-blue-500 focus:outline-none" title="點擊修改 AD/AP">
-                                
-                                <div class="flex items-center gap-1 bg-slate-900/60 p-1 rounded border border-slate-800/80">
-                                    ${renderAvailabilitySelects(player)}
-                                </div>
-
-                                <select onchange="updatePlayerField('${player.id}', 'rounds', this.value)" class="rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-200 focus:border-blue-500 focus:outline-none" title="選擇場次">
-                                    <option value="7" ${roundsVal === "7" ? "selected" : ""}>7場</option>
-                                    <option value="14" ${roundsVal === "14" ? "selected" : ""}>14場</option>
+                                <input type="text" value="${escapeHtml(player.name)}" onchange="updatePlayerField('${player.id}', 'name', this.value)" class="w-20 rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-200 font-bold">
+                                <input type="text" value="${escapeHtml(player.position)}" placeholder="AD/AP" onchange="updatePlayerField('${player.id}', 'position', this.value)" class="w-14 rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-300">
+                                <div class="flex items-center gap-1 bg-slate-900/60 p-1 rounded border border-slate-800">${renderAvailabilitySelects(player)}</div>
+                                <select onchange="updatePlayerField('${player.id}', 'rounds', this.value)" class="rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-200">
+                                    <option value="7" ${player.rounds === "7" ? "selected" : ""}>7場</option>
+                                    <option value="14" ${player.rounds === "14" ? "selected" : ""}>14場</option>
                                 </select>
-
-                                <select onchange="updatePlayerField('${player.id}', 'groupId', this.value)" class="w-22 rounded border border-amber-900/80 bg-amber-950/40 px-1 py-0.5 text-xs text-amber-300 focus:border-amber-500 focus:outline-none" title="選擇同綁定編號者將會一起拖拉">
+                                <select onchange="updatePlayerField('${player.id}', 'groupId', this.value)" class="w-20 rounded border border-amber-900 bg-amber-950/40 px-1 py-0.5 text-xs text-amber-300">
                                     ${renderGroupSelectOptions(player.groupId)}
                                 </select>
-
-                                <input type="text" value="${escapeHtml(player.note || '')}" placeholder="備註" onchange="updatePlayerField('${player.id}', 'note', this.value)" class="w-40 rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-400 focus:border-blue-500 focus:outline-none" title="點擊修改備註">
+                                <input type="text" value="${escapeHtml(player.note || '')}" placeholder="備註" onchange="updatePlayerField('${player.id}', 'note', this.value)" class="w-28 rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-400">
                             </div>
                             <div class="flex items-center gap-1 shrink-0 ml-2">
-                                ${!isMasterView ? `
-                                    <div class="flex flex-wrap gap-1">
-                                        ${teams.map((t, tIdx) => `
-                                            <button onclick="sendToTeam('${player.id}', ${tIdx})" class="rounded border border-blue-900 bg-blue-950/70 px-2 py-1 text-xs font-medium text-blue-300 hover:bg-blue-900/50">+${t.name || `隊${tIdx+1}`}</button>
-                                        `).join('')}
-                                    </div>
-                                ` : ''}
-                                <button onclick="deletePoolPlayer('${player.id}')" title="從總名單刪除此成員" class="ml-1 rounded bg-slate-900 border border-slate-800 px-2 py-1 text-xs text-rose-400 hover:bg-rose-950 transition">✕</button>
+                                ${!isMasterView ? teams.map((t, tIdx) => `<button onclick="sendToTeam('${player.id}',${tIdx})" class="rounded border border-blue-900 bg-blue-950 px-2 py-1 text-xs text-blue-300">+${t.name}</button>`).join('') : ''}
+                                <button onclick="deletePoolPlayer('${player.id}')" class="rounded bg-slate-900 border border-slate-800 px-2 py-1 text-xs text-rose-400">✕</button>
                             </div>
                         </div>
                     `;
                 });
             }
-
             html += `</div></div>`;
             return html;
         }
 
-        // ==================== 10. SortableJS 拖曳互動設定 ====================
         function initSortables() {
-            sortableInstances.forEach(instance => instance.destroy());
+            sortableInstances.forEach(i => i.destroy());
             sortableInstances = [];
-
             document.querySelectorAll(".sortable-list").forEach(el => {
                 if (el.closest(".hidden")) return;
-
-                const instance = new Sortable(el, {
-                    group: {
-                        name: "artale-shared-lists",
-                        pull: function(to, from) {
-                            return (from.el.dataset.listType === "pool" && to.el.dataset.listType !== "pool") ? "clone" : true;
-                        },
-                        put: function(to, from) {
-                            const listType = to.el.dataset.listType;
-                            const fromType = from.el.dataset.listType;
-                            if (listType === "pool") {
-                                return fromType === "pool";
-                            }
-                            if (listType.startsWith("team_")) {
-                                const teamIndex = parseInt(listType.replace("team_", ""), 10);
-                                const group = currentGroup();
-                                return !!group && group.teams && group.teams[teamIndex] && group.teams[teamIndex].members.length < MAX_TEAM_SIZE;
-                            }
-                            return true;
-                        }
-                    },
+                const inst = new Sortable(el, {
+                    group: { name: "artale-shared-lists", pull: (to, from) => from.el.dataset.listType === "pool" ? "clone" : true },
                     draggable: ".drag-item",
                     animation: 150,
                     filter: "input, button, select",
@@ -1450,224 +900,114 @@
                     ghostClass: "sortable-ghost",
                     dragClass: "sortable-drag",
                     onEnd: function(evt) {
-                        const fromType = evt.from.dataset.listType;
-                        const toType = evt.to.dataset.listType;
-                        const itemId = evt.item && evt.item.dataset ? evt.item.dataset.id : "";
-                        const newIndex = typeof evt.newDraggableIndex === "number" ? evt.newDraggableIndex : evt.newIndex;
-
-                        if (!itemId || !fromType || !toType || typeof newIndex !== "number") return;
-                        if (fromType === toType && evt.oldDraggableIndex === evt.newDraggableIndex) return;
-
-                        const activeWeekKey = state.activeWeek;
-                        const groupIndex = state.activeGroup;
+                        const fromType = evt.from.dataset.listType, toType = evt.to.dataset.listType;
+                        const itemId = evt.item?.dataset?.id, newIndex = evt.newDraggableIndex ?? evt.newIndex;
+                        if (!itemId || fromType === toType && evt.oldDraggableIndex === newIndex) return;
 
                         transactionUpdate(data => {
-                            const poolPlayer = data.pool.find(p => String(p.id) === String(itemId));
-                            if (!poolPlayer) return false;
-
-                            let groupMembers = [poolPlayer];
-                            if (fromType === "pool" && toType === "pool" && poolPlayer.groupId) {
-                                const bound = data.pool.filter(p => p.groupId === poolPlayer.groupId);
-                                if (bound.length > 1) {
-                                    groupMembers = bound;
-                                }
-                            }
-
+                            const p = data.pool.find(item => String(item.id) === String(itemId));
+                            if (!p) return false;
                             if (fromType === "pool" && toType === "pool") {
-                                const memberIds = new Set(groupMembers.map(p => String(p.id)));
-                                const remainingPool = data.pool.filter(p => !memberIds.has(String(p.id)));
-
-                                let targetIdx = newIndex;
-                                if (state.filterAvailableOnly && currentTab !== "master") {
-                                    const dayAvail = state.activeGroup;
-                                    const filteredPool = remainingPool.filter(p => {
-                                        const avail = getPlayerWeekAvailability(p, activeWeekKey);
-                                        return avail[dayAvail] && avail[dayAvail].trim() !== "";
-                                    });
-                                    if (newIndex < filteredPool.length) {
-                                        const targetItem = filteredPool[newIndex];
-                                        targetIdx = remainingPool.findIndex(p => String(p.id) === String(targetItem.id));
-                                    } else {
-                                        targetIdx = remainingPool.length;
-                                    }
-                                }
-
-                                if (targetIdx < 0) targetIdx = 0;
-                                remainingPool.splice(targetIdx, 0, ...groupMembers);
-                                data.pool = remainingPool;
+                                data.pool = data.pool.filter(item => String(item.id) !== String(itemId));
+                                data.pool.splice(newIndex, 0, p);
                                 return true;
                             }
-
-                            if (!data.weeksData || !data.weeksData[activeWeekKey]) return false;
-                            const weekData = data.weeksData[activeWeekKey];
-                            const targetGroup = weekData.groups[groupIndex];
-                            if (!targetGroup || !Array.isArray(targetGroup.teams)) return false;
-
-                            const isTargetTeam = toType.startsWith("team_");
-                            const isSourceTeam = fromType.startsWith("team_");
-
-                            if (fromType === "pool" && isTargetTeam) {
-                                const targetTeamIndex = parseInt(toType.replace("team_", ""), 10);
-                                const targetTeam = targetGroup.teams[targetTeamIndex];
-                                if (!targetTeam) return false;
-
-                                if (hasReachedWeeklyLimit(poolPlayer, weekData)) {
-                                    const rounds = String(poolPlayer.rounds || "7");
-                                    const limitText = rounds === "14" ? "2個隊伍" : "1個隊伍";
-                                    alert(`「${poolPlayer.name || '此玩家'}」設定為 ${rounds}場，本週已達上限（只能在 ${limitText} 上），無法再加入！`);
-                                    return false;
-                                }
-
-                                if (!targetTeam.members) targetTeam.members = [];
-                                
-                                if (targetTeam.members.length >= MAX_TEAM_SIZE) {
-                                    alert(`該隊伍人數已滿！`);
-                                    return false;
-                                }
-
-                                if (targetTeam.members.some(item => String(item.id) === String(poolPlayer.id))) {
-                                    alert(`「${poolPlayer.name || '此玩家'}」已經在該隊伍中！`);
-                                    return false;
-                                }
-
-                                const safeIndex = Math.max(0, Math.min(newIndex, targetTeam.members.length));
-                                targetTeam.members.splice(safeIndex, 0, { ...poolPlayer });
+                            const wData = data.weeksData[state.activeWeek];
+                            const targetGroup = wData.groups[state.activeGroup];
+                            if (fromType === "pool" && toType.startsWith("team_")) {
+                                const tIdx = parseInt(toType.replace("team_", ""), 10);
+                                if (hasReachedWeeklyLimit(p, wData)) { alert("已達本週出賽上限！"); return false; }
+                                targetGroup.teams[tIdx].members.splice(newIndex, 0, { ...p });
                                 return true;
                             }
-
-                            if (isSourceTeam && isTargetTeam) {
-                                const sourceTeamIndex = parseInt(fromType.replace("team_", ""), 10);
-                                const targetTeamIndex = parseInt(toType.replace("team_", ""), 10);
-                                const sourceTeam = targetGroup.teams[sourceTeamIndex] ? targetGroup.teams[sourceTeamIndex].members : [];
-                                const targetTeam = targetGroup.teams[targetTeamIndex] ? targetGroup.teams[targetTeamIndex].members : [];
-
-                                const itemIdx = sourceTeam.findIndex(p => String(p.id) === String(itemId));
-                                if (itemIdx < 0) return false;
-
-                                const [movedItem] = sourceTeam.splice(itemIdx, 1);
-
-                                if (sourceTeamIndex !== targetTeamIndex && targetTeam.length >= MAX_TEAM_SIZE) {
-                                    sourceTeam.splice(itemIdx, 0, movedItem);
-                                    return false;
+                            if (fromType.startsWith("team_") && toType.startsWith("team_")) {
+                                const sTeam = targetGroup.teams[parseInt(fromType.replace("team_", ""), 10)].members;
+                                const tTeam = targetGroup.teams[parseInt(toType.replace("team_", ""), 10)].members;
+                                const idx = sTeam.findIndex(item => String(item.id) === String(itemId));
+                                if (idx > -1) {
+                                    const [moved] = sTeam.splice(idx, 1);
+                                    tTeam.splice(newIndex, 0, moved);
+                                    return true;
                                 }
-
-                                const safeIndex = Math.max(0, Math.min(newIndex, targetTeam.length));
-                                targetTeam.splice(safeIndex, 0, movedItem);
-                                return true;
                             }
-
                             return false;
                         });
                     }
                 });
-
-                sortableInstances.push(instance);
+                sortableInstances.push(inst);
             });
         }
 
-        // ==================== 11. 圖片匯出與預覽函式 ====================
         function formatShareHeader() {
             return `
-                <div class="share-row-item" style="border-bottom: 1px solid #334155; padding-bottom: 4px; margin-bottom: 6px; font-weight: 700; color: #94a3b8; font-size: 13px;">
+                <div class="share-row-item" style="border-bottom: 1px solid #334155; padding-bottom: 2px; margin-bottom: 4px; font-weight: 700; color: #94a3b8; font-size: 13px;">
                     <div class="share-col-level">等級</div>
                     <div class="share-col-job">職業</div>
                     <div class="share-col-name">名字</div>
+                    <div class="share-col-part">場次</div>
                 </div>
             `;
         }
 
         function formatShareLine(player) {
             const level = getPlayerLevel(player);
+            let nameStr = player.name || "";
+            if (nameStr.length > 7) {
+                nameStr = nameStr.slice(0, 7);
+            }
+
+            let partText = "";
+            if (player.part === "first") partText = "前7場";
+            else if (player.part === "second") partText = "後7場";
 
             return `
                 <div class="share-row-item">
                     <div class="share-col-level">${escapeHtml(level || "---")}</div>
                     <div class="share-col-job">${escapeHtml(player.job || "")}</div>
-                    <div class="share-col-name">${escapeHtml(player.name || "")}</div>
+                    <div class="share-col-name">${escapeHtml(nameStr)}</div>
+                    <div class="share-col-part">${escapeHtml(partText)}</div>
                 </div>
             `;
         }
 
         async function generateAllTeamsImage() {
             if (typeof html2canvas === "undefined") return;
-
             const shareCard = document.getElementById("share-card");
             const wData = currentWeekData();
-            let columnsHtml = "";
-            let totalTeamsCount = 0;
+            let columnsHtml = "", count = 0;
 
-            wData.groups.forEach((group, groupIndex) => {
+            wData.groups.forEach((group, gIdx) => {
                 const teams = group.teams || [];
-                const hasAnyTeamMembers = teams.some(t => t.members && t.members.length > 0);
+                if (!teams.some(t => (t.members || []).length > 0)) return;
 
-                if (!hasAnyTeamMembers) return;
-
-                const dateText = group.date ? group.date : "";
-                const groupTitle = GROUP_NAMES[groupIndex] || `第${groupIndex + 1}團`;
-                const headerInfo = dateText ? `${groupTitle} - ${dateText}` : groupTitle;
-
-                let colHtml = `<div class="share-group-column">`;
-                colHtml += `<div class="share-group-header-text">${escapeHtml(headerInfo)}</div>`;
-
+                let colHtml = `<div class="share-group-column"><div class="share-group-header-text">${escapeHtml(group.date ? `${GROUP_NAMES[gIdx]} -${group.date}` : GROUP_NAMES[gIdx])}</div>`;
                 teams.forEach((team, tIdx) => {
-                    if (team.members && team.members.length > 0) {
-                        const tTime = team.time || "20:00";
-                        const conText = team.con ? "(連14場)" : "";
-                        const marginTopStyle = tIdx > 0 ? "style=\"margin-top:14px;\"" : "";
-                        colHtml += `<div class="share-team-title-text" ${marginTopStyle}>${team.emoji || "⚔️"} ${escapeHtml(team.name || `第${tIdx+1}隊`)} (${escapeHtml(tTime)}) (${team.members.length}人) ${conText}</div>`;
+                    if ((team.members || []).length > 0) {
+                        colHtml += `<div class="share-team-title-text" ${tIdx > 0 ? 'style="margin-top:6px;"' : ''}>${team.emoji || "⚔️"} ${escapeHtml(team.name)} (${escapeHtml(team.time || "20:00")}) (${team.members.length}人)${team.con ? " (連14場)" : ""}</div>`;
                         colHtml += formatShareHeader();
-                        team.members.forEach(player => colHtml += formatShareLine(player));
+                        team.members.forEach(p => colHtml += formatShareLine(p));
                     }
                 });
-
                 colHtml += `</div>`;
                 columnsHtml += colHtml;
-                totalTeamsCount++;
+                count++;
             });
 
-            if (totalTeamsCount === 0) {
-                alert("本週目前沒有任何已分配的隊伍可產生圖片！");
-                return;
-            }
+            if (count === 0) { alert("本週無任何隊伍可產生圖片！"); return; }
 
             previewImages = [];
             shareCard.innerHTML = `<div class="share-card-inner">${columnsHtml}</div>`;
-
             try {
-                await new Promise(resolve => requestAnimationFrame(resolve));
-                const canvas = await html2canvas(shareCard.firstElementChild, {
-                    scale: 2,
-                    useCORS: true,
-                    backgroundColor: "#111111",
-                    logging: false,
-                    imageTimeout: 0
-                });
-
-                const weekTitle = getWeekDisplayTitle(state.activeWeek);
-                previewImages.push({
-                    title: `本週全部隊伍 (${weekTitle})`,
-                    dataUrl: canvas.toDataURL("image/png")
-                });
-            } catch (error) {
-                console.error("產生團隊圖片失敗：", error);
-            }
-
+                await new Promise(r => requestAnimationFrame(r));
+                const canvas = await html2canvas(shareCard.firstElementChild, { scale: 2, useCORS: true, backgroundColor: "#111111", logging: false });
+                previewImages.push({ title: `本週全部隊伍 (${getWeekDisplayTitle(state.activeWeek)})`, dataUrl: canvas.toDataURL("image/png") });
+            } catch(e) {}
             shareCard.innerHTML = "";
-            if (previewImages.length > 0) {
-                currentImageIndex = 0;
-                showModal();
-            }
+            if (previewImages.length > 0) { currentImageIndex = 0; showModal(); }
         }
 
-        function showModal() {
-            updateModalContent();
-            document.getElementById("image-modal").classList.remove("hidden");
-        }
-
-        function closeModal() {
-            document.getElementById("image-modal").classList.add("hidden");
-        }
-
+        function showModal() { updateModalContent(); document.getElementById("image-modal").classList.remove("hidden"); }
+        function closeModal() { document.getElementById("image-modal").classList.add("hidden"); }
         function updateModalContent() {
             const item = previewImages[currentImageIndex];
             if (!item) return;
@@ -1677,126 +1017,54 @@
             document.getElementById("btn-prev").disabled = currentImageIndex === 0;
             document.getElementById("btn-next").disabled = currentImageIndex === previewImages.length - 1;
         }
-
-        function changeImage(step) {
-            const newIndex = currentImageIndex + step;
-            if (newIndex >= 0 && newIndex < previewImages.length) {
-                currentImageIndex = newIndex;
-                updateModalContent();
-            }
-        }
+        function changeImage(step) { if (previewImages[currentImageIndex + step]) { currentImageIndex += step; updateModalContent(); } }
 
         async function copyModalImage() {
-            const copyBtn = document.getElementById("btn-copy-img");
+            const btn = document.getElementById("btn-copy-img");
             try {
-                if (!navigator.clipboard || typeof ClipboardItem === "undefined") {
-                    throw new Error("此瀏覽器不支援圖片剪貼簿 API");
-                }
-                const item = previewImages[currentImageIndex];
-                const res = await fetch(item.dataUrl);
-                const blob = await res.blob();
+                const blob = await (await fetch(previewImages[currentImageIndex].dataUrl)).blob();
                 await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
-
-                if (copyBtn) {
-                    copyBtn.innerText = "✓ 已複製！";
-                    copyBtn.classList.remove("border-blue-600", "bg-blue-600/20", "text-blue-300");
-                    copyBtn.classList.add("border-emerald-500", "bg-emerald-600/20", "text-emerald-300");
-                    if (copyBtnTimer) clearTimeout(copyBtnTimer);
-                    copyBtnTimer = setTimeout(() => {
-                        copyBtn.innerText = "📋 複製圖片";
-                        copyBtn.classList.remove("border-emerald-500", "bg-emerald-600/20", "text-emerald-300");
-                        copyBtn.classList.add("border-blue-600", "bg-blue-600/20", "text-blue-300");
-                    }, 1500);
-                }
-            } catch (err) {
-                console.error("複製失敗：", err);
-                if (copyBtn) {
-                    copyBtn.innerText = "✕ 複製失敗";
-                    setTimeout(() => { copyBtn.innerText = "📋 複製圖片"; }, 1500);
-                }
-            }
+                btn.innerText = "✓ 已複製！";
+                setTimeout(() => btn.innerText = "📋 複製圖片", 1500);
+            } catch(e) { btn.innerText = "✕ 失敗"; }
         }
 
         function downloadModalImage() {
-            const item = previewImages[currentImageIndex];
-            if (!item) return;
             const link = document.createElement("a");
-            link.download = `Artale_${item.title}.png`;
-            link.href = item.dataUrl;
+            link.download = `Artale_${previewImages[currentImageIndex].title}.png`;
+            link.href = previewImages[currentImageIndex].dataUrl;
             link.click();
         }
 
-        // ==================== 12. 主畫面渲染與初始化入口 ====================
         function render() {
-            const defaultWeekKey = formatDateKey(getTuesdayOfWeek());
-            state = state || {
-                activeWeek: defaultWeekKey,
-                activeGroup: 0,
-                filterAvailableOnly: true,
-                pool: [],
-                weeksData: {}
-            };
-
-            const weekSelect = document.getElementById("week-select");
-            if (weekSelect) {
-                const weekKeys = getAvailableWeekKeys();
-                weekSelect.innerHTML = weekKeys.map(wk => {
-                    const title = getWeekDisplayTitle(wk);
-                    return `<option value="${wk}" ${wk === state.activeWeek ? "selected" : ""}>${title}</option>`;
-                }).join("");
-            }
-
-            const deleteWeekBtn = document.getElementById("btn-delete-week");
-            if (deleteWeekBtn) {
-                if (isTwoWeeksAgoOrEarlier(state.activeWeek)) {
-                    deleteWeekBtn.classList.remove("hidden");
-                } else {
-                    deleteWeekBtn.classList.add("hidden");
-                }
-            }
-
-            const wData = currentWeekData();
-            const curGroup = currentGroup();
-            const teamsList = curGroup.teams || createDefaultTeams();
+            const weekKeys = getAvailableWeekKeys();
+            document.getElementById("week-select").innerHTML = weekKeys.map(wk => `<option value="${wk}" ${wk === state.activeWeek ? "selected" : ""}>${getWeekDisplayTitle(wk)}</option>`).join("");
             
-            let groupTeamTotalMembers = 0;
-            teamsList.forEach(t => { groupTeamTotalMembers += (t.members?.length || 0); });
+            const delBtn = document.getElementById("btn-delete-week");
+            if (isTwoWeeksAgoOrEarlier(state.activeWeek)) delBtn.classList.remove("hidden"); else delBtn.classList.add("hidden");
+
+            const wData = currentWeekData(), curGroup = currentGroup(), teamsList = curGroup.teams || createDefaultTeams();
+            let totalM = 0; teamsList.forEach(t => totalM += (t.members?.length || 0));
 
             document.getElementById("master-tab-badge").innerText = `${state.pool.length}人`;
-            document.getElementById("teams-tab-badge").innerText = `${groupTeamTotalMembers}/18`;
+            document.getElementById("teams-tab-badge").innerText = `${totalM}/18`;
+            document.getElementById("current-teams-count").innerText = teamsList.length;
 
-            const currentTeamsCountEl = document.getElementById("current-teams-count");
-            if (currentTeamsCountEl) {
-                currentTeamsCountEl.innerText = teamsList.length;
-            }
+            const isMaster = currentTab === "master";
+            document.getElementById("tab-btn-master").className = `flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold transition-all duration-200 ${isMaster ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"}`;
+            document.getElementById("tab-btn-teams").className = `flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold transition-all duration-200 ${!isMaster ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"}`;
+            
+            document.getElementById("tab-content-master").classList.toggle("hidden", !isMaster);
+            document.getElementById("tab-content-teams").classList.toggle("hidden", isMaster);
 
-            const btnMaster = document.getElementById("tab-btn-master");
-            const btnTeams = document.getElementById("tab-btn-teams");
-            const contentMaster = document.getElementById("tab-content-master");
-            const contentTeams = document.getElementById("tab-content-teams");
-
-            if (currentTab === "master") {
-                btnMaster.className = "flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold bg-blue-600 text-white shadow-md transition-all duration-200";
-                btnTeams.className = "flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-all duration-200";
-                contentMaster.classList.remove("hidden");
-                contentTeams.classList.add("hidden");
-            } else {
-                btnTeams.className = "flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold bg-blue-600 text-white shadow-md transition-all duration-200";
-                btnMaster.className = "flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-all duration-200";
-                contentTeams.classList.remove("hidden");
-                contentMaster.classList.add("hidden");
-            }
-
-            const tabs = document.getElementById("group-tabs");
-            tabs.innerHTML = wData.groups.map((group, index) => {
-                const weekday = getWeekday(group.date);
-                const gName = GROUP_NAMES[index] || `第 ${index + 1} 團`;
+            document.getElementById("group-tabs").innerHTML = wData.groups.map((g, idx) => {
+                const wd = getWeekday(g.date);
                 return `
                     <div class="flex flex-col items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-950 p-2.5">
-                        <button onclick="selectGroup(${index})" class="rounded-md px-3.5 py-1.5 text-xs font-semibold transition ${index === state.activeGroup ? "bg-blue-600 text-white shadow-sm" : "bg-slate-900 border border-slate-800 text-slate-300 hover:bg-slate-800"}">${gName}</button>
+                        <button onclick="selectGroup(${idx})" class="rounded-md px-3.5 py-1.5 text-xs font-semibold transition ${idx === state.activeGroup ? "bg-blue-600 text-white" : "bg-slate-900 border border-slate-800 text-slate-300 hover:bg-slate-800"}">${GROUP_NAMES[idx]}</button>
                         <div class="flex items-center gap-1">
-                            <input type="text" value="${escapeHtml(group.date || "")}" placeholder="9/8" maxlength="5" inputmode="numeric" onchange="updateGroupDate(${index}, this.value)" class="w-24 rounded border border-slate-800 bg-slate-900 px-2 py-1 text-center text-xs text-slate-200 focus:border-blue-500 focus:outline-none" title="設定日期">
-                            ${weekday ? `<span class="text-xs font-medium text-blue-400">(${weekday})</span>` : ""}
+                            <input type="text" value="${escapeHtml(g.date || "")}" maxlength="5" onchange="updateGroupDate(${idx}, this.value)" class="w-24 rounded border border-slate-800 bg-slate-900 px-2 py-1 text-center text-xs text-slate-200">
+                            ${wd ? `<span class="text-xs text-blue-400">(${wd})</span>` : ""}
                         </div>
                     </div>
                 `;
@@ -1809,7 +1077,6 @@
             initSortables();
         }
 
-        // 啟動程式
         initFirebaseListener();
     </script>
 </body>

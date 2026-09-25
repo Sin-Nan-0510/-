@@ -791,6 +791,10 @@
                             </label>
                         </div>
                         <div class="flex items-center gap-1 bg-slate-900/60 p-1 rounded border border-slate-800">${renderAvailabilitySelects(player)}</div>
+                        <select onchange="updatePlayerField('${player.id}', 'rounds', this.value)" class="rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-200">
+                            <option value="7" ${player.rounds === "7" ? "selected" : ""}>7場</option>
+                            <option value="14" ${player.rounds === "14" ? "selected" : ""}>14場</option>
+                        </select>
                         <input type="text" value="${escapeHtml(player.note || '')}" placeholder="備註" onchange="updatePlayerField('${player.id}', 'note', this.value)" class="w-28 rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-400">
                     </div>
                     <button onclick="removeFromTeam(${tIdx}, ${idx})" class="rounded bg-slate-900 border border-slate-800 px-2 py-1 text-xs text-rose-400">✕</button>

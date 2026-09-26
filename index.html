@@ -136,7 +136,7 @@
                 <select id="week-select" onchange="selectWeek(this.value)" class="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm font-bold text-blue-400 focus:border-blue-500 focus:outline-none"></select>
                 <button onclick="switchWeekRelative(1)" class="rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-xs font-semibold text-slate-200 hover:bg-slate-700 transition">下一週 ▶</button>
                 <button onclick="jumpToCurrentWeek()" class="rounded-lg border border-blue-900 bg-blue-950 px-2.5 py-1.5 text-xs font-semibold text-blue-300 hover:bg-blue-900/50 transition">回到本週</button>
-                <button id="btn-delete-week" onclick="deleteCurrentWeek()" class="hidden rounded-lg border border-rose-900 bg-rose-950/80 px-2.5 py-1.5 text-xs font-semibold text-rose-300 hover:bg-rose-900 transition">🗑️ 刪除此週</button>
+                <button id="btn-delete-week" onclick="deleteCurrentWeek()" class="rounded-lg border border-rose-900 bg-rose-950/80 px-2.5 py-1.5 text-xs font-semibold text-rose-300 hover:bg-rose-900 transition">🗑️ 刪除此週</button>
             </div>
             <div class="text-xs text-slate-400">
                 💡 切換週別時，<span class="text-blue-400 font-semibold">等級/職業/名字/ADAP</span> 全週保留，僅<span class="text-emerald-400 font-semibold">填寫時間與隊伍分配</span>按週獨立。
@@ -184,10 +184,9 @@
                 <div id="teams-pool-container"></div>
 
                 <div class="rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-sm">
-                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <button onclick="generateAllTeamsImage()" class="rounded-lg border border-blue-900 bg-blue-950/50 px-4 py-3 text-sm font-bold text-blue-300 transition hover:bg-blue-900/50">🖼️ 產生全部團隊圖片</button>
                         <button onclick="clearCurrentGroup()" class="rounded-lg border border-slate-800 bg-slate-800 px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-slate-700">🧹 清空當前團隊伍</button>
-                        <button onclick="clearAllData()" class="rounded-lg border border-slate-800 bg-slate-800 px-4 py-3 text-sm font-medium text-rose-400 transition hover:bg-slate-700">⚠️ 清空全部資料</button>
                     </div>
                 </div>
             </div>
@@ -352,15 +351,6 @@
             if (weekKey === formatDateKey(lastTue)) return `${rangeStr} (上週)`;
             
             return rangeStr;
-        }
-
-        function isTwoWeeksAgoOrEarlier(weekKey) {
-            if (!weekKey) return false;
-            const [y, m, d] = weekKey.split('-').map(Number);
-            const targetDate = new Date(y, m - 1, d);
-            const twoWeeksAgo = getTuesdayOfWeek();
-            twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-            return targetDate <= twoWeeksAgo;
         }
 
         function getWeekday(date) {
@@ -731,7 +721,7 @@
 
         function deleteCurrentWeek() {
             const wk = state.activeWeek;
-            if (!isTwoWeeksAgoOrEarlier(wk) || !confirm(`確定要刪除「${getWeekDisplayTitle(wk)}」的週別資料嗎？`)) return;
+            if (!confirm(`確定要刪除「${getWeekDisplayTitle(wk)}」的週別資料嗎？`)) return;
             transactionUpdate(data => {
                 delete data.weeksData[wk];
                 data.activeWeek = formatDateKey(getTuesdayOfWeek());
@@ -905,17 +895,6 @@
                     t.con = false; 
                 });
                 return true; 
-            });
-        }
-
-        function clearAllData() {
-            if (!confirm("確定要清空全部資料嗎？")) return;
-            const defKey = formatDateKey(getTuesdayOfWeek());
-            transactionUpdate(data => {
-                data.pool = []; 
-                data.activeWeek = defKey;
-                data.weeksData = { [defKey]: { groups: createDefaultWeekGroups(defKey) } };
-                return true;
             });
         }
 
@@ -1295,10 +1274,9 @@
             const weekKeys = getAvailableWeekKeys();
             document.getElementById("week-select").innerHTML = weekKeys.map(wk => `<option value="${wk}" ${wk === state.activeWeek ? "selected" : ""}>${getWeekDisplayTitle(wk)}</option>`).join("");
             
-            // 刪除按鈕顯隱控制
+            // 刪除按鈕現在不再受到隱藏限制
             const delBtn = document.getElementById("btn-delete-week");
-            if (isTwoWeeksAgoOrEarlier(state.activeWeek)) delBtn.classList.remove("hidden"); 
-            else delBtn.classList.add("hidden");
+            // (已經在 HTML 取消 hidden class 且移除了隱藏判定邏輯)
 
             // 統計數據計算
             const wData = currentWeekData(), curGroup = currentGroup(), teamsList = curGroup.teams || [];

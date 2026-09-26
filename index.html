@@ -270,7 +270,7 @@
         let database = null;
         let firebaseEnabled = false;
         let sortableInstances = [];
-        let currentTab = "master";
+        let currentTab = "teams"; // 修改預設分頁為「隊伍分配」
         let previewImages = [];
         let currentImageIndex = 0;
         let poolSortState = { field: null, direction: 'desc' };
@@ -646,7 +646,6 @@
         // ==========================================
         // 8. 介面事件處理與動作 (UI Event Handlers)
         // ==========================================
-        // 整隊轉移至目標星期的功能（覆蓋空隊伍且維持原星期欄位結構不變）
         function moveEntireTeamToTargetGroup(sTeamIdx, targetGroupIdx) {
             if (targetGroupIdx === "" || isNaN(targetGroupIdx)) return;
             const targetGIdx = parseInt(targetGroupIdx, 10);
@@ -665,21 +664,17 @@
                 const movingTeam = srcGroup.teams[sTeamIdx];
                 if (!targetGroup.teams) targetGroup.teams = [];
 
-                // 搜尋目標星期是否有空隊伍（members 長度為 0）
                 const emptyTeamIdx = targetGroup.teams.findIndex(t => !t.members || t.members.length === 0);
 
                 if (emptyTeamIdx !== -1) {
-                    // 覆蓋目標星期的空隊伍
                     targetGroup.teams[emptyTeamIdx].members = JSON.parse(JSON.stringify(movingTeam.members || []));
                     targetGroup.teams[emptyTeamIdx].con = Boolean(movingTeam.con);
                 } else {
-                    // 追加一隊
                     const newTeam = JSON.parse(JSON.stringify(movingTeam));
                     newTeam.name = `第${targetGroup.teams.length + 1}隊`;
                     targetGroup.teams.push(newTeam);
                 }
 
-                // 清空原星期的隊伍成員，保留隊伍欄位與名稱順序
                 srcGroup.teams[sTeamIdx].members = [];
                 srcGroup.teams[sTeamIdx].con = false;
 
@@ -741,7 +736,6 @@
             });
         }
 
-        // 減少最後一隊（包含只剩 1 隊時的處理）
         function removeTeamFromCurrentGroup() {
             transactionUpdate(data => {
                 const g = data.weeksData[state.activeWeek].groups[state.activeGroup];
@@ -998,7 +992,6 @@
                             </div>
 
                             <div class="flex items-center gap-2">
-                                <!-- 整隊轉移選項 -->
                                 <div class="flex items-center gap-1 bg-blue-950/60 p-1 rounded-lg border border-blue-800/80">
                                     <select id="move-team-select-${tIdx}" class="rounded border border-blue-700 bg-slate-900 px-2 py-1 text-xs text-blue-300 font-bold">
                                         <option value="">整隊轉移至...</option>
@@ -1022,7 +1015,6 @@
             const idSuffix = isMasterView ? "master" : "teams";
             const wData = currentWeekData();
             
-            // 修改：利用 isMasterView 判斷，總名單不隱藏，隊伍分配下方才隱藏已達上限成員
             let displayPool = isMasterView 
                 ? state.pool 
                 : state.pool.filter(p => !hasReachedWeeklyLimit(p, wData));
@@ -1109,7 +1101,6 @@
                             const p = data.pool.find(item => String(item.id) === String(itemId));
                             if (!p) return false;
                             
-                            // 總名單內部拖曳排序
                             if (fromType === "pool" && toType === "pool") {
                                 data.pool = data.pool.filter(item => String(item.id) !== String(itemId));
                                 data.pool.splice(newIndex, 0, p);
@@ -1119,7 +1110,6 @@
                             const wData = data.weeksData[state.activeWeek];
                             const targetGroup = wData.groups[state.activeGroup];
                             
-                            // 從總名單拖入隊伍
                             if (fromType === "pool" && toType.startsWith("team_")) {
                                 const tIdx = parseInt(toType.replace("team_", ""), 10);
                                 if (hasReachedWeeklyLimit(p, wData)) { 
@@ -1130,7 +1120,6 @@
                                 return true;
                             }
                             
-                            // 隊伍間或隊伍內部拖曳
                             if (fromType.startsWith("team_") && toType.startsWith("team_")) {
                                 const sTeam = targetGroup.teams[parseInt(fromType.replace("team_", ""), 10)].members;
                                 const tTeam = targetGroup.teams[parseInt(toType.replace("team_", ""), 10)].members;
@@ -1270,15 +1259,9 @@
         // 12. 主渲染進入點 (Main Render Routine)
         // ==========================================
         function render() {
-            // 下拉選單週別更新
             const weekKeys = getAvailableWeekKeys();
             document.getElementById("week-select").innerHTML = weekKeys.map(wk => `<option value="${wk}" ${wk === state.activeWeek ? "selected" : ""}>${getWeekDisplayTitle(wk)}</option>`).join("");
             
-            // 刪除按鈕現在不再受到隱藏限制
-            const delBtn = document.getElementById("btn-delete-week");
-            // (已經在 HTML 取消 hidden class 且移除了隱藏判定邏輯)
-
-            // 統計數據計算
             const wData = currentWeekData(), curGroup = currentGroup(), teamsList = curGroup.teams || [];
             let totalM = 0; 
             teamsList.forEach(t => totalM += (t.members?.length || 0));
@@ -1287,7 +1270,6 @@
             document.getElementById("teams-tab-badge").innerText = `${totalM}/18`;
             document.getElementById("current-teams-count").innerText = teamsList.length;
 
-            // Tab 按鈕狀態
             const isMaster = currentTab === "master";
             document.getElementById("tab-btn-master").className = `flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold transition-all duration-200 ${isMaster ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"}`;
             document.getElementById("tab-btn-teams").className = `flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold transition-all duration-200 ${!isMaster ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"}`;
@@ -1295,7 +1277,6 @@
             document.getElementById("tab-content-master").classList.toggle("hidden", !isMaster);
             document.getElementById("tab-content-teams").classList.toggle("hidden", isMaster);
 
-            // 遠征團分頁
             document.getElementById("group-tabs").innerHTML = wData.groups.map((g, idx) => {
                 const wd = getWeekday(g.date);
                 return `
@@ -1309,12 +1290,10 @@
                 `;
             }).join("");
 
-            // 內容區塊渲染
             document.getElementById("master-view-container").innerHTML = renderPool(true);
             document.getElementById("teams-cards-container").innerHTML = renderTeamsContainer();
             document.getElementById("teams-pool-container").innerHTML = renderPool(false);
 
-            // 初始化 Sortable 拖曳綁定
             initSortables();
         }
 

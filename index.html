@@ -1019,7 +1019,7 @@
                 const members = team.members || [];
                 
                 // 本日其他隊伍選項 (供同日隊伍互轉)
-                let otherTeamsOptions = `<option value="">移至同日其他隊...</option>`;
+                let otherTeamsOptions = `<option value="">移至同日隊</option>`;
                 currentTeams.forEach((ot, otIdx) => {
                     if (otIdx !== tIdx) {
                         otherTeamsOptions += `<option value="${otIdx}">移至 ${escapeHtml(ot.name)}</option>`;
@@ -1050,7 +1050,7 @@
                                 <!-- 跨日轉移選單 -->
                                 <div class="flex items-center gap-1 bg-blue-950/60 p-1 rounded-lg border border-blue-800/80">
                                     <select id="move-team-select-${tIdx}" class="rounded border border-blue-700 bg-slate-900 px-2 py-1 text-xs text-blue-300 font-bold">
-                                        <option value="">整隊轉移至...</option>
+                                        <option value="">移至其他週</option>
                                         ${otherDayOptions}
                                     </select>
                                     <button onclick="moveEntireTeamToTargetGroup(${tIdx}, document.getElementById('move-team-select-${tIdx}').value)" class="rounded bg-blue-600 hover:bg-blue-500 px-2.5 py-1 text-xs font-bold text-white transition">轉移至其他日</button>

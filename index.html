@@ -58,6 +58,10 @@
             border-radius: 12px;
             padding: 14px 16px;
             flex-shrink: 0;
+            /* 調整隊伍與隊伍之間隔為 1.5 個中文字（約 30px） */
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
         }
         .share-group-header-text {
             font-size: 22px;
@@ -68,11 +72,15 @@
             border-bottom: 2px solid #3b82f6;
             padding-bottom: 5px;
         }
+        .share-team-wrapper {
+            display: flex;
+            flex-direction: column;
+        }
         .share-team-title-text {
             font-size: 17px;
             font-weight: 700;
             color: #93c5fd;
-            margin-top: 8px;
+            margin-top: 0px;
             margin-bottom: 3px;
             line-height: 21px;
         }
@@ -1241,11 +1249,12 @@
                 if (!teams.some(t => (t.members || []).length > 0)) return;
 
                 let colHtml = `<div class="share-group-column"><div class="share-group-header-text">${escapeHtml(group.date ? `${GROUP_NAMES[gIdx]} -${group.date}` : GROUP_NAMES[gIdx])}</div>`;
-                teams.forEach((team, tIdx) => {
+                teams.forEach((team) => {
                     if ((team.members || []).length > 0) {
-                        colHtml += `<div class="share-team-title-text" ${tIdx > 0 ? 'style="margin-top:6px;"' : ''}>${team.emoji || "⚔️"} ${escapeHtml(team.name)} (${escapeHtml(team.time || "20:00")}) (${team.members.length}人)${team.con ? " (連14場)" : ""}</div>`;
+                        colHtml += `<div class="share-team-wrapper"><div class="share-team-title-text">${team.emoji || "⚔️"} ${escapeHtml(team.name)} (${escapeHtml(team.time || "20:00")}) (${team.members.length}人)${team.con ? " (連14場)" : ""}</div>`;
                         colHtml += formatShareHeader();
                         team.members.forEach(p => colHtml += formatShareLine(p));
+                        colHtml += `</div>`;
                     }
                 });
                 colHtml += `</div>`;

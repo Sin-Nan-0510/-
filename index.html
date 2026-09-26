@@ -76,7 +76,6 @@
             margin-bottom: 3px;
             line-height: 21px;
         }
-        /* 修正：增加文字行高與上下空間，避免產生圖片時名字底部被裁切 */
         .share-row-item {
             display: flex;
             align-items: center;
@@ -248,7 +247,6 @@
         const WEEKDAY_NAMES = ["日", "一", "二", "三", "四", "五", "六"];
         const JOB_LIST = ["黑騎士", "聖騎士", "英雄", "火毒", "冰雷", "主教", "箭神", "神射手", "夜使者", "暗影神偷", "槍神", "拳霸"];
 
-        // 職業顏色與樣式映射表 (用以查表取代重複 switch-case)
         const JOB_STYLE_MAP = {
             "黑騎士":   { class: "bg-rose-900/80 border-rose-500 text-rose-200 font-bold",       style: "background-color: #881337; color: #fecdd3;" },
             "聖騎士":   { class: "bg-rose-900/80 border-rose-500 text-rose-200 font-bold",       style: "background-color: #881337; color: #fecdd3;" },
@@ -319,9 +317,6 @@
             return "";
         }
 
-        /**
-         * 計算指定日期當週週二的 Date 物件
-         */
         function getTuesdayOfWeek(d = new Date()) {
             const date = new Date(d);
             const day = date.getDay();
@@ -507,7 +502,6 @@
             };
         }
 
-        // 簡化目前數據獲取之鏈式表達
         function currentWeekData() { 
             return state.weeksData[state.activeWeek] || { groups: createDefaultWeekGroups(state.activeWeek) }; 
         }
@@ -662,6 +656,48 @@
         // ==========================================
         // 8. 介面事件處理與動作 (UI Event Handlers)
         // ==========================================
+        // 整隊轉移至目標星期的功能（覆蓋空隊伍且維持原星期欄位結構不變）
+        function moveEntireTeamToTargetGroup(sTeamIdx, targetGroupIdx) {
+            if (targetGroupIdx === "" || isNaN(targetGroupIdx)) return;
+            const targetGIdx = parseInt(targetGroupIdx, 10);
+            if (targetGIdx === state.activeGroup) {
+                alert("該隊伍已經在當前星期！");
+                return;
+            }
+
+            transactionUpdate(data => {
+                const wData = data.weeksData[state.activeWeek];
+                const srcGroup = wData.groups[state.activeGroup];
+                const targetGroup = wData.groups[targetGIdx];
+
+                if (!srcGroup || !srcGroup.teams[sTeamIdx]) return false;
+
+                const movingTeam = srcGroup.teams[sTeamIdx];
+                if (!targetGroup.teams) targetGroup.teams = [];
+
+                // 搜尋目標星期是否有空隊伍（members 長度為 0）
+                const emptyTeamIdx = targetGroup.teams.findIndex(t => !t.members || t.members.length === 0);
+
+                if (emptyTeamIdx !== -1) {
+                    // 覆蓋目標星期的空隊伍
+                    targetGroup.teams[emptyTeamIdx].members = JSON.parse(JSON.stringify(movingTeam.members || []));
+                    targetGroup.teams[emptyTeamIdx].con = Boolean(movingTeam.con);
+                } else {
+                    // 追加一隊
+                    const newTeam = JSON.parse(JSON.stringify(movingTeam));
+                    newTeam.name = `第${targetGroup.teams.length + 1}隊`;
+                    targetGroup.teams.push(newTeam);
+                }
+
+                // 清空原星期的隊伍成員，保留隊伍欄位與名稱順序
+                srcGroup.teams[sTeamIdx].members = [];
+                srcGroup.teams[sTeamIdx].con = false;
+
+                alert(`成功將【${movingTeam.name}】成員搬移至 ${GROUP_NAMES[targetGIdx]}！`);
+                return true;
+            });
+        }
+
         function getAvailableWeekKeys() {
             const set = new Set(Object.keys(state.weeksData || {}));
             const base = getTuesdayOfWeek();
@@ -715,12 +751,26 @@
             });
         }
 
+        // 減少最後一隊（包含只剩 1 隊時的處理）
         function removeTeamFromCurrentGroup() {
             transactionUpdate(data => {
                 const g = data.weeksData[state.activeWeek].groups[state.activeGroup];
-                if (g.teams.length <= 1) { alert("至少需保留一支隊伍！"); return false; }
-                g.teams.pop();
-                return true;
+                if (g.teams.length === 0) {
+                    alert("目前已經沒有隊伍！");
+                    return false;
+                }
+                const lastTeam = g.teams[g.teams.length - 1];
+                const hasMembers = lastTeam.members && lastTeam.members.length > 0;
+                
+                const msg = hasMembers 
+                    ? `確定要移除【${lastTeam.name}】嗎？該隊伍內有 ${lastTeam.members.length} 名成員，移除後成員將回歸總名單。`
+                    : `確定要移除【${lastTeam.name}】嗎？`;
+
+                if (confirm(msg)) {
+                    g.teams.pop();
+                    return true;
+                }
+                return false;
             });
         }
 
@@ -835,7 +885,7 @@
                 if (targetTeam.members.some(m => String(m.id) === String(id))) return false;
                 
                 targetTeam.members.push({ ...p });
-                return true;
+                return true; 
             });
         }
 
@@ -854,7 +904,7 @@
                     t.time = "20:00"; 
                     t.con = false; 
                 });
-                return true;
+                return true; 
             });
         }
 
@@ -944,11 +994,22 @@
 
         function renderTeamsContainer() {
             let html = "";
-            (currentGroup().teams || createDefaultTeams()).forEach((team, tIdx) => {
+            const otherDayOptions = GROUP_NAMES.map((name, gIdx) => {
+                if (gIdx === state.activeGroup) return '';
+                return `<option value="${gIdx}">移至 ${name}</option>`;
+            }).join("");
+
+            const currentTeams = currentGroup().teams || [];
+
+            if (currentTeams.length === 0) {
+                return `<div class="rounded-xl border border-slate-800 bg-slate-900 p-8 text-center text-slate-500">當前遠征團暫無任何隊伍，請點擊上方「➕ 新增隊伍」按鈕新增。</div>`;
+            }
+
+            currentTeams.forEach((team, tIdx) => {
                 const members = team.members || [];
                 html += `
                     <div class="rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-sm">
-                        <div class="mb-4 flex items-center justify-between border-b border-slate-800 pb-3">
+                        <div class="mb-4 flex items-center justify-between border-b border-slate-800 pb-3 flex-wrap gap-3">
                             <div class="flex items-center gap-3 flex-wrap">
                                 <h2 class="flex items-center gap-2 text-lg font-bold text-slate-200"><span>${team.emoji || "⚔️"}</span>${escapeHtml(team.name)}</h2>
                                 <input type="text" value="${escapeHtml(team.time || "20:00")}" maxlength="5" onchange="updateTeamTime(${tIdx}, this.value)" class="w-16 rounded border border-slate-800 bg-slate-900 px-1 py-0.5 text-center text-xs text-blue-400 font-bold">
@@ -956,7 +1017,18 @@
                                     <input type="checkbox" ${team.con ? "checked" : ""} onchange="updateTeamCon(${tIdx}, this.checked)"> 連14場
                                 </label>
                             </div>
-                            <span class="rounded-full bg-slate-800 px-2.5 py-1 text-xs text-slate-300">${members.length} 人</span>
+
+                            <div class="flex items-center gap-2">
+                                <!-- 整隊轉移選項 -->
+                                <div class="flex items-center gap-1 bg-blue-950/60 p-1 rounded-lg border border-blue-800/80">
+                                    <select id="move-team-select-${tIdx}" class="rounded border border-blue-700 bg-slate-900 px-2 py-1 text-xs text-blue-300 font-bold">
+                                        <option value="">整隊轉移至...</option>
+                                        ${otherDayOptions}
+                                    </select>
+                                    <button onclick="moveEntireTeamToTargetGroup(${tIdx}, document.getElementById('move-team-select-${tIdx}').value)" class="rounded bg-blue-600 hover:bg-blue-500 px-2.5 py-1 text-xs font-bold text-white transition">轉移整隊</button>
+                                </div>
+                                <span class="rounded-full bg-slate-800 px-2.5 py-1 text-xs text-slate-300">${members.length} 人</span>
+                            </div>
                         </div>
                         <div id="team_${tIdx}-list" data-list-type="team_${tIdx}" class="sortable-list grid min-h-[80px] gap-3">
                             ${members.length === 0 ? `<p class="text-center text-xs text-slate-500 py-4">此隊伍目前暫無成員</p>` : members.map((m, mIdx) => memberCard(m, mIdx, tIdx)).join("")}
@@ -971,8 +1043,10 @@
             const idSuffix = isMasterView ? "master" : "teams";
             const wData = currentWeekData();
             
-            // 修正：只要本週尚未達到出賽上限，通通顯示出來（不管是否有填寫該時段的時間）
-            let displayPool = state.pool.filter(p => !hasReachedWeeklyLimit(p, wData));
+            // 修改：利用 isMasterView 判斷，總名單不隱藏，隊伍分配下方才隱藏已達上限成員
+            let displayPool = isMasterView 
+                ? state.pool 
+                : state.pool.filter(p => !hasReachedWeeklyLimit(p, wData));
 
             const getIcon = f => poolSortState.field !== f ? '↕️' : (poolSortState.direction === 'asc' ? '▲' : '▼');
             const teams = currentGroup().teams || [];
@@ -1227,7 +1301,7 @@
             else delBtn.classList.add("hidden");
 
             // 統計數據計算
-            const wData = currentWeekData(), curGroup = currentGroup(), teamsList = curGroup.teams || createDefaultTeams();
+            const wData = currentWeekData(), curGroup = currentGroup(), teamsList = curGroup.teams || [];
             let totalM = 0; 
             teamsList.forEach(t => totalM += (t.members?.length || 0));
 

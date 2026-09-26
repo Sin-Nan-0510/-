@@ -227,7 +227,10 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
 
     <script>
-        const firebaseConfig = {
+        // ==========================================
+        // 1. 常數與設定值 (Constants & Config)
+        // ==========================================
+        const FIREBASE_CONFIG = {
             apiKey: "AIzaSyCbD0DlTCKkDzjkyADmovtjSe6j6blClZI",
             authDomain: "boss-3a974.firebaseapp.com",
             databaseURL: "https://boss-3a974-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -242,10 +245,37 @@
         const MAX_GROUPS = 7;
         const GROUP_NAMES = ["週二", "週三", "週四", "週五", "週六", "週日", "週一"];
         const WEEKDAYS = ["週二", "週三", "週四", "週五", "週六", "週日", "週一"];
+        const WEEKDAY_NAMES = ["日", "一", "二", "三", "四", "五", "六"];
         const JOB_LIST = ["黑騎士", "聖騎士", "英雄", "火毒", "冰雷", "主教", "箭神", "神射手", "夜使者", "暗影神偷", "槍神", "拳霸"];
 
-        let database = null, firebaseEnabled = false, sortableInstances = [];
-        let currentTab = "master", copyBtnTimer = null, previewImages = [], currentImageIndex = 0;
+        // 職業顏色與樣式映射表 (用以查表取代重複 switch-case)
+        const JOB_STYLE_MAP = {
+            "黑騎士":   { class: "bg-rose-900/80 border-rose-500 text-rose-200 font-bold",       style: "background-color: #881337; color: #fecdd3;" },
+            "聖騎士":   { class: "bg-rose-900/80 border-rose-500 text-rose-200 font-bold",       style: "background-color: #881337; color: #fecdd3;" },
+            "英雄":     { class: "bg-rose-900/80 border-rose-500 text-rose-200 font-bold",       style: "background-color: #881337; color: #fecdd3;" },
+            "火毒":     { class: "bg-sky-900/80 border-sky-500 text-sky-200 font-bold",         style: "background-color: #075985; color: #bae6fd;" },
+            "冰雷":     { class: "bg-sky-900/80 border-sky-500 text-sky-200 font-bold",         style: "background-color: #075985; color: #bae6fd;" },
+            "主教":     { class: "bg-sky-900/80 border-sky-500 text-sky-200 font-bold",         style: "background-color: #075985; color: #bae6fd;" },
+            "箭神":     { class: "bg-fuchsia-900/80 border-fuchsia-500 text-fuchsia-200 font-bold", style: "background-color: #701a75; color: #f5d0fe;" },
+            "神射手":   { class: "bg-fuchsia-900/80 border-fuchsia-500 text-fuchsia-200 font-bold", style: "background-color: #701a75; color: #f5d0fe;" },
+            "夜使者":   { class: "bg-orange-900/80 border-orange-500 text-orange-200 font-bold", style: "background-color: #7c2d12; color: #ffedd5;" },
+            "暗影神偷": { class: "bg-orange-900/80 border-orange-500 text-orange-200 font-bold", style: "background-color: #7c2d12; color: #ffedd5;" },
+            "槍神":     { class: "bg-emerald-900/80 border-emerald-500 text-emerald-200 font-bold", style: "background-color: #064e3b; color: #a7f3d0;" },
+            "拳霸":     { class: "bg-emerald-900/80 border-emerald-500 text-emerald-200 font-bold", style: "background-color: #064e3b; color: #a7f3d0;" }
+        };
+
+        const DEFAULT_JOB_CLASS = "bg-slate-900 border-slate-800 text-slate-400";
+        const DEFAULT_JOB_STYLE = "background-color: #0f172a; color: #94a3b8;";
+
+        // ==========================================
+        // 2. 全域狀態變數 (Global State)
+        // ==========================================
+        let database = null;
+        let firebaseEnabled = false;
+        let sortableInstances = [];
+        let currentTab = "master";
+        let previewImages = [];
+        let currentImageIndex = 0;
         let poolSortState = { field: null, direction: 'desc' };
 
         let state = {
@@ -256,6 +286,312 @@
             weeksData: {}
         };
 
+        // ==========================================
+        // 3. 通用工具與日期輔助函式 (Helper Utilities)
+        // ==========================================
+        function makeId() { 
+            return Date.now() + "-" + Math.random().toString(36).substring(2, 10); 
+        }
+
+        function escapeHtml(str) {
+            return String(str ?? "")
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#039;");
+        }
+
+        function isLevel(val) { 
+            return /^(?:lv\.?\s*)?\d+$/i.test(String(val || "").trim()); 
+        }
+
+        function normalizeLevel(val) { 
+            const match = String(val || "").trim().match(/\d+/); 
+            return match ? match[0] : ""; 
+        }
+
+        function getPlayerLevel(player) {
+            if (!player) return "";
+            for (const v of [player.level, player.lv, player["等級"], player.levelText]) {
+                if (isLevel(v)) return normalizeLevel(v);
+            }
+            return "";
+        }
+
+        /**
+         * 計算指定日期當週週二的 Date 物件
+         */
+        function getTuesdayOfWeek(d = new Date()) {
+            const date = new Date(d);
+            const day = date.getDay();
+            date.setDate(date.getDate() + ((day >= 2) ? (2 - day) : (2 - day - 7)));
+            date.setHours(0, 0, 0, 0);
+            return date;
+        }
+
+        function formatDateKey(date) {
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        }
+
+        function getWeekDisplayTitle(weekKey) {
+            if (!weekKey) return "";
+            const [y, m, d] = weekKey.split('-').map(Number);
+            if (!y) return weekKey;
+            
+            const start = new Date(y, m - 1, d);
+            const end = new Date(start);
+            end.setDate(start.getDate() + 6);
+            
+            const rangeStr = `${start.getFullYear()} ${String(start.getMonth() + 1).padStart(2, '0')}/${String(start.getDate()).padStart(2, '0')} ~ ${end.getMonth() + 1}/${String(end.getDate()).padStart(2, '0')}`;
+            const thisKey = formatDateKey(getTuesdayOfWeek());
+            
+            if (weekKey === thisKey) return `${rangeStr} (本週)`;
+            
+            const nextTue = getTuesdayOfWeek(); 
+            nextTue.setDate(nextTue.getDate() + 7);
+            if (weekKey === formatDateKey(nextTue)) return `${rangeStr} (下週)`;
+            
+            const lastTue = getTuesdayOfWeek(); 
+            lastTue.setDate(lastTue.getDate() - 7);
+            if (weekKey === formatDateKey(lastTue)) return `${rangeStr} (上週)`;
+            
+            return rangeStr;
+        }
+
+        function isTwoWeeksAgoOrEarlier(weekKey) {
+            if (!weekKey) return false;
+            const [y, m, d] = weekKey.split('-').map(Number);
+            const targetDate = new Date(y, m - 1, d);
+            const twoWeeksAgo = getTuesdayOfWeek();
+            twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+            return targetDate <= twoWeeksAgo;
+        }
+
+        function getWeekday(date) {
+            const parts = String(date).split("/");
+            if (parts.length < 2) return "";
+            const d = new Date(new Date().getFullYear(), Number(parts[0]) - 1, Number(parts[1]));
+            return isNaN(d) ? "" : WEEKDAY_NAMES[d.getDay()];
+        }
+
+        function setSyncStatus(text, className = "text-[11px] text-slate-500") {
+            const el = document.getElementById("sync-status");
+            if (el) { 
+                el.className = `mt-1 ${className}`; 
+                el.textContent = text; 
+            }
+        }
+
+        // ==========================================
+        // 4. 預設資料結構產生器 (Default Generators)
+        // ==========================================
+        function createDefaultTeams() {
+            return [
+                { name: "第1隊", emoji: "⚔️", time: "20:00", con: false, members: [] },
+                { name: "第2隊", emoji: "⚔️", time: "20:00", con: false, members: [] },
+                { name: "第3隊", emoji: "⚔️", time: "20:00", con: false, members: [] }
+            ];
+        }
+
+        function createDefaultWeekGroups(weekKey) {
+            const [y, m, d] = (weekKey || formatDateKey(getTuesdayOfWeek())).split('-').map(Number);
+            const startDate = y ? new Date(y, m - 1, d) : getTuesdayOfWeek();
+            return Array.from({ length: MAX_GROUPS }, (_, i) => {
+                const targetDate = new Date(startDate);
+                targetDate.setDate(startDate.getDate() + i);
+                return { teams: createDefaultTeams(), date: `${targetDate.getMonth() + 1}/${targetDate.getDate()}` };
+            });
+        }
+
+        function createEmptyFirebaseData() {
+            const defaultWeekKey = formatDateKey(getTuesdayOfWeek());
+            return { 
+                activeWeek: defaultWeekKey, 
+                pool: [], 
+                weeksData: { [defaultWeekKey]: { groups: createDefaultWeekGroups(defaultWeekKey) } } 
+            };
+        }
+
+        // ==========================================
+        // 5. 資料規格化邏輯 (Normalization)
+        // ==========================================
+        function normalizeAvailabilityArray(arr) {
+            const def = ["", "", "", "", "", "", ""];
+            return Array.isArray(arr) ? def.map((_, i) => typeof arr[i] === "string" ? arr[i] : "") : def;
+        }
+
+        function normalizePlayerAvailability(avail, wk) {
+            if (Array.isArray(avail)) return { [wk]: normalizeAvailabilityArray(avail) };
+            if (avail && typeof avail === "object") {
+                const res = {};
+                for (const k in avail) res[k] = normalizeAvailabilityArray(avail[k]);
+                return res;
+            }
+            return { [wk]: ["", "", "", "", "", "", ""] };
+        }
+
+        function getPlayerWeekAvailability(player, wk) {
+            if (!player || !player.availability) return ["", "", "", "", "", "", ""];
+            if (Array.isArray(player.availability)) return normalizeAvailabilityArray(player.availability);
+            return normalizeAvailabilityArray(player.availability[wk]);
+        }
+
+        function normalizePlayer(player, activeWeekKey) {
+            if (!player || typeof player !== "object") return null;
+            const wk = activeWeekKey || formatDateKey(getTuesdayOfWeek());
+            return {
+                id: String(player.id || makeId()),
+                level: getPlayerLevel(player),
+                name: String(player.name || player["名稱"] || player["名字"] || "").trim(),
+                job: String(player.job || player["職業"] || "").trim(),
+                position: String(player.position || player["AD/AP"] || "").trim(),
+                rounds: String(player.rounds || "7").trim(),
+                groupId: String(player.groupId || "").trim(),
+                part: String(player.part || ""),
+                availability: normalizePlayerAvailability(player.availability, wk),
+                note: String(player.note || player["備註"] || "").trim()
+            };
+        }
+
+        function normalizeWeekGroupData(weekData, wk) {
+            let groups = Array.isArray(weekData?.groups) ? weekData.groups.slice(0, MAX_GROUPS) : [];
+            const defGroups = createDefaultWeekGroups(wk);
+            
+            while (groups.length < MAX_GROUPS) {
+                groups.push(defGroups[groups.length]);
+            }
+
+            groups = groups.map((g, idx) => {
+                const teams = Array.isArray(g?.teams) ? g.teams.map((t, tIdx) => ({
+                    name: t.name || `第${tIdx + 1}隊`,
+                    emoji: t.emoji || "⚔️",
+                    time: t.time || "20:00",
+                    con: Boolean(t.con),
+                    members: Array.isArray(t.members) ? t.members.map(p => normalizePlayer(p, wk)).filter(Boolean) : []
+                })) : createDefaultTeams();
+                
+                return { teams, date: typeof g?.date === "string" && g.date ? g.date : defGroups[idx].date };
+            });
+            return { groups };
+        }
+
+        function normalizeFirebaseData(data) {
+            const defaultWeekKey = formatDateKey(getTuesdayOfWeek());
+            if (!data || typeof data !== "object") return createEmptyFirebaseData();
+            
+            const activeWeek = typeof data.activeWeek === "string" && data.activeWeek ? data.activeWeek : defaultWeekKey;
+            const weeksData = {};
+            
+            if (data.weeksData && typeof data.weeksData === "object") {
+                for (const wk in data.weeksData) {
+                    weeksData[wk] = normalizeWeekGroupData(data.weeksData[wk], wk);
+                }
+            }
+            if (!weeksData[activeWeek]) {
+                weeksData[activeWeek] = { groups: createDefaultWeekGroups(activeWeek) };
+            }
+            
+            const pool = Array.isArray(data.pool) ? data.pool.map(p => normalizePlayer(p, activeWeek)).filter(Boolean) : [];
+            return { activeWeek, weeksData, pool };
+        }
+
+        function applyFirebaseDataToLocal(data) {
+            const norm = normalizeFirebaseData(data);
+            state = {
+                activeWeek: norm.activeWeek,
+                activeGroup: Math.min(Math.max(state.activeGroup || 0, 0), MAX_GROUPS - 1),
+                filterAvailableOnly: typeof state.filterAvailableOnly === "boolean" ? state.filterAvailableOnly : true,
+                pool: norm.pool,
+                weeksData: norm.weeksData
+            };
+        }
+
+        // 簡化目前數據獲取之鏈式表達
+        function currentWeekData() { 
+            return state.weeksData[state.activeWeek] || { groups: createDefaultWeekGroups(state.activeWeek) }; 
+        }
+        
+        function currentGroup() { 
+            return currentWeekData().groups[state.activeGroup] || { teams: createDefaultTeams(), date: "" }; 
+        }
+
+        // ==========================================
+        // 6. 資料庫與狀態同步 (Database Sync)
+        // ==========================================
+        function saveLocalState() {
+            try { 
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({ activeWeek: state.activeWeek, pool: state.pool, weeksData: state.weeksData })); 
+            } catch(e) {}
+        }
+
+        async function transactionUpdate(mutator) {
+            if (!firebaseEnabled) {
+                const local = normalizeFirebaseData(state);
+                if (mutator(local) !== false) { 
+                    applyFirebaseDataToLocal(local); 
+                    saveLocalState(); 
+                    render(); 
+                }
+                return;
+            }
+            try {
+                const ref = database.ref(FIREBASE_PATH);
+                const res = await ref.transaction(cur => {
+                    const latest = normalizeFirebaseData(cur);
+                    return mutator(latest) === false ? cur : latest;
+                });
+                if (res?.snapshot) { 
+                    applyFirebaseDataToLocal(res.snapshot.val()); 
+                    render(); 
+                }
+            } catch(err) { 
+                alert("資料同步失敗"); 
+            }
+        }
+
+        function initFirebaseListener() {
+            try {
+                if (typeof firebase !== "undefined" && !firebase.apps.length) {
+                    firebase.initializeApp(FIREBASE_CONFIG);
+                }
+                database = firebase.database();
+                firebaseEnabled = true;
+            } catch (error) {
+                firebaseEnabled = false;
+                setSyncStatus("⚠ Firebase 初始化失敗，使用本機儲存", "text-[11px] text-rose-400");
+            }
+
+            if (!firebaseEnabled) { 
+                loadLocalState(); 
+                return; 
+            }
+
+            database.ref(".info/connected").on("value", snap => {
+                const isConn = snap.val() === true;
+                setSyncStatus(isConn ? "☁ 已連線到 Firebase" : "☁ Firebase 連線中...", isConn ? "text-[11px] text-emerald-400" : "text-[11px] text-amber-400");
+            });
+
+            database.ref(FIREBASE_PATH).on("value", snap => { 
+                applyFirebaseDataToLocal(snap.val()); 
+                render(); 
+            });
+            
+            database.ref(FIREBASE_PATH).transaction(cur => cur === null ? createEmptyFirebaseData() : cur);
+        }
+
+        function loadLocalState() {
+            try { 
+                applyFirebaseDataToLocal(JSON.parse(localStorage.getItem(STORAGE_KEY))); 
+            } catch(e) { 
+                applyFirebaseDataToLocal(null); 
+            }
+            render();
+        }
+
+        // ==========================================
+        // 7. 商業邏輯運算 (Business Logic)
+        // ==========================================
         function getPlayerWeeklyTeamCount(playerId, weekData) {
             if (!weekData || !weekData.groups) return 0;
             let count = 0;
@@ -323,259 +659,15 @@
             });
         }
 
-        function getJobColorClass(job) {
-            switch (job) {
-                case "黑騎士": case "聖騎士": case "英雄": return "bg-rose-900/80 border-rose-500 text-rose-200 font-bold";
-                case "火毒": case "冰雷": case "主教": return "bg-sky-900/80 border-sky-500 text-sky-200 font-bold";
-                case "箭神": case "神射手": return "bg-fuchsia-900/80 border-fuchsia-500 text-fuchsia-200 font-bold";
-                case "夜使者": case "暗影神偷": return "bg-orange-900/80 border-orange-500 text-orange-200 font-bold";
-                case "槍神": case "拳霸": return "bg-emerald-900/80 border-emerald-500 text-emerald-200 font-bold";
-                default: return "bg-slate-900 border-slate-800 text-slate-400";
-            }
-        }
-
-        function getJobOptionStyle(job) {
-            switch (job) {
-                case "黑騎士": case "聖騎士": case "英雄": return "background-color: #881337; color: #fecdd3;";
-                case "火毒": case "冰雷": case "主教": return "background-color: #075985; color: #bae6fd;";
-                case "箭神": case "神射手": return "background-color: #701a75; color: #f5d0fe;";
-                case "夜使者": case "暗影神偷": return "background-color: #7c2d12; color: #ffedd5;";
-                case "槍神": case "拳霸": return "background-color: #064e3b; color: #a7f3d0;";
-                default: return "background-color: #0f172a; color: #94a3b8;";
-            }
-        }
-
-        function renderJobSelectOptions(currentJob) {
-            let html = `<option value="" style="background-color: #0f172a; color: #94a3b8;" ${!currentJob ? "selected" : ""}>職業</option>`;
-            JOB_LIST.forEach(job => {
-                html += `<option value="${job}" style="${getJobOptionStyle(job)}" ${currentJob === job ? "selected" : ""}>${job}</option>`;
-            });
-            return html;
-        }
-
-        function renderGroupSelectOptions(currentGroupId) {
-            let html = `<option value="" class="bg-slate-900 text-slate-500" ${!currentGroupId ? "selected" : ""}></option>`;
-            for (let i = 1; i <= 15; i++) {
-                html += `<option value="g${i}" class="bg-slate-900 text-amber-400 font-bold" ${currentGroupId === `g${i}` ? "selected" : ""}>大小號 ${i}</option>`;
-            }
-            return html;
-        }
-
-        function getTuesdayOfWeek(d = new Date()) {
-            const date = new Date(d);
-            const day = date.getDay();
-            date.setDate(date.getDate() + ((day >= 2) ? (2 - day) : (2 - day - 7)));
-            date.setHours(0, 0, 0, 0);
-            return date;
-        }
-
-        function formatDateKey(date) {
-            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-        }
-
-        function getWeekDisplayTitle(weekKey) {
-            if (!weekKey) return "";
-            const [y, m, d] = weekKey.split('-').map(Number);
-            if (!y) return weekKey;
-            const start = new Date(y, m - 1, d);
-            const end = new Date(start);
-            end.setDate(start.getDate() + 6);
-            const rangeStr = `${start.getFullYear()} ${String(start.getMonth() + 1).padStart(2, '0')}/${String(start.getDate()).padStart(2, '0')} ~ ${end.getMonth() + 1}/${String(end.getDate()).padStart(2, '0')}`;
-            
-            const thisKey = formatDateKey(getTuesdayOfWeek());
-            if (weekKey === thisKey) return `${rangeStr} (本週)`;
-            const nextTue = getTuesdayOfWeek(); nextTue.setDate(nextTue.getDate() + 7);
-            if (weekKey === formatDateKey(nextTue)) return `${rangeStr} (下週)`;
-            const lastTue = getTuesdayOfWeek(); lastTue.setDate(lastTue.getDate() - 7);
-            if (weekKey === formatDateKey(lastTue)) return `${rangeStr} (上週)`;
-            return rangeStr;
-        }
-
-        function isTwoWeeksAgoOrEarlier(weekKey) {
-            if (!weekKey) return false;
-            const [y, m, d] = weekKey.split('-').map(Number);
-            const targetDate = new Date(y, m - 1, d);
-            const twoWeeksAgo = getTuesdayOfWeek();
-            twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-            return targetDate <= twoWeeksAgo;
-        }
-
-        function makeId() { return Date.now() + "-" + Math.random().toString(36).substring(2, 10); }
-
-        function createDefaultTeams() {
-            return [
-                { name: "第1隊", emoji: "⚔️", time: "20:00", con: false, members: [] },
-                { name: "第2隊", emoji: "⚔️", time: "20:00", con: false, members: [] },
-                { name: "第3隊", emoji: "⚔️", time: "20:00", con: false, members: [] }
-            ];
-        }
-
-        function createDefaultWeekGroups(weekKey) {
-            const [y, m, d] = (weekKey || formatDateKey(getTuesdayOfWeek())).split('-').map(Number);
-            const startDate = y ? new Date(y, m - 1, d) : getTuesdayOfWeek();
-            return Array.from({ length: MAX_GROUPS }, (_, i) => {
-                const targetDate = new Date(startDate);
-                targetDate.setDate(startDate.getDate() + i);
-                return { teams: createDefaultTeams(), date: `${targetDate.getMonth() + 1}/${targetDate.getDate()}` };
-            });
-        }
-
-        function createEmptyFirebaseData() {
-            const defaultWeekKey = formatDateKey(getTuesdayOfWeek());
-            return { activeWeek: defaultWeekKey, pool: [], weeksData: { [defaultWeekKey]: { groups: createDefaultWeekGroups(defaultWeekKey) } } };
-        }
-
-        function setSyncStatus(text, className = "text-[11px] text-slate-500") {
-            const el = document.getElementById("sync-status");
-            if (el) { el.className = `mt-1 ${className}`; el.textContent = text; }
-        }
-
-        try {
-            if (typeof firebase !== "undefined" && !firebase.apps.length) firebase.initializeApp(firebaseConfig);
-            database = firebase.database();
-            firebaseEnabled = true;
-        } catch (error) {
-            firebaseEnabled = false;
-            setSyncStatus("⚠ Firebase 初始化失敗，使用本機儲存", "text-[11px] text-rose-400");
-        }
-
-        if (firebaseEnabled) {
-            database.ref(".info/connected").on("value", snap => {
-                setSyncStatus(snap.val() === true ? "☁ 已連線到 Firebase" : "☁ Firebase 連線中...", snap.val() === true ? "text-[11px] text-emerald-400" : "text-[11px] text-amber-400");
-            });
-        }
-
-        function isLevel(val) { return /^(?:lv\.?\s*)?\d+$/i.test(String(val || "").trim()); }
-        function normalizeLevel(val) { const match = String(val || "").trim().match(/\d+/); return match ? match[0] : ""; }
-
-        function getPlayerLevel(player) {
-            if (!player) return "";
-            for (const v of [player.level, player.lv, player["等級"], player.levelText]) {
-                if (isLevel(v)) return normalizeLevel(v);
-            }
-            return "";
-        }
-
-        function normalizeAvailabilityArray(arr) {
-            const def = ["", "", "", "", "", "", ""];
-            return Array.isArray(arr) ? def.map((_, i) => typeof arr[i] === "string" ? arr[i] : "") : def;
-        }
-
-        function normalizePlayerAvailability(avail, wk) {
-            if (Array.isArray(avail)) return { [wk]: normalizeAvailabilityArray(avail) };
-            if (avail && typeof avail === "object") {
-                const res = {};
-                for (const k in avail) res[k] = normalizeAvailabilityArray(avail[k]);
-                return res;
-            }
-            return { [wk]: ["", "", "", "", "", "", ""] };
-        }
-
-        function getPlayerWeekAvailability(player, wk) {
-            if (!player || !player.availability) return ["", "", "", "", "", "", ""];
-            if (Array.isArray(player.availability)) return normalizeAvailabilityArray(player.availability);
-            return normalizeAvailabilityArray(player.availability[wk]);
-        }
-
-        function normalizePlayer(player, activeWeekKey) {
-            if (!player || typeof player !== "object") return null;
-            const wk = activeWeekKey || formatDateKey(getTuesdayOfWeek());
-            const res = {
-                id: String(player.id || makeId()),
-                level: getPlayerLevel(player),
-                name: String(player.name || player["名稱"] || player["名字"] || "").trim(),
-                job: String(player.job || player["職業"] || "").trim(),
-                position: String(player.position || player["AD/AP"] || "").trim(),
-                rounds: String(player.rounds || "7").trim(),
-                groupId: String(player.groupId || "").trim(),
-                part: String(player.part || ""),
-                availability: normalizePlayerAvailability(player.availability, wk),
-                note: String(player.note || player["備註"] || "").trim()
-            };
-            return res;
-        }
-
-        function normalizeWeekGroupData(weekData, wk) {
-            let groups = Array.isArray(weekData?.groups) ? weekData.groups.slice(0, MAX_GROUPS) : [];
-            const defGroups = createDefaultWeekGroups(wk);
-            while (groups.length < MAX_GROUPS) groups.push(defGroups[groups.length]);
-
-            groups = groups.map((g, idx) => {
-                let teams = Array.isArray(g?.teams) ? g.teams.map((t, tIdx) => ({
-                    name: t.name || `第${tIdx + 1}隊`,
-                    emoji: t.emoji || "⚔️",
-                    time: t.time || "20:00",
-                    con: Boolean(t.con),
-                    members: Array.isArray(t.members) ? t.members.map(p => normalizePlayer(p, wk)).filter(Boolean) : []
-                })) : createDefaultTeams();
-                return { teams, date: typeof g?.date === "string" && g.date ? g.date : defGroups[idx].date };
-            });
-            return { groups };
-        }
-
-        function normalizeFirebaseData(data) {
-            const defaultWeekKey = formatDateKey(getTuesdayOfWeek());
-            if (!data || typeof data !== "object") return createEmptyFirebaseData();
-            let activeWeek = typeof data.activeWeek === "string" && data.activeWeek ? data.activeWeek : defaultWeekKey;
-            let weeksData = {};
-            if (data.weeksData && typeof data.weeksData === "object") {
-                for (const wk in data.weeksData) weeksData[wk] = normalizeWeekGroupData(data.weeksData[wk], wk);
-            }
-            if (!weeksData[activeWeek]) weeksData[activeWeek] = { groups: createDefaultWeekGroups(activeWeek) };
-            const pool = Array.isArray(data.pool) ? data.pool.map(p => normalizePlayer(p, activeWeek)).filter(Boolean) : [];
-            return { activeWeek, weeksData, pool };
-        }
-
-        function applyFirebaseDataToLocal(data) {
-            const norm = normalizeFirebaseData(data);
-            state = {
-                activeWeek: norm.activeWeek,
-                activeGroup: Math.min(Math.max(state.activeGroup || 0, 0), MAX_GROUPS - 1),
-                filterAvailableOnly: typeof state.filterAvailableOnly === "boolean" ? state.filterAvailableOnly : true,
-                pool: norm.pool,
-                weeksData: norm.weeksData
-            };
-        }
-
-        function currentWeekData() { return state.weeksData[state.activeWeek] || { groups: createDefaultWeekGroups(state.activeWeek) }; }
-        function currentGroup() { return currentWeekData().groups[state.activeGroup] || { teams: createDefaultTeams(), date: "" }; }
-
-        function saveLocalState() {
-            try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ activeWeek: state.activeWeek, pool: state.pool, weeksData: state.weeksData })); } catch(e) {}
-        }
-
-        async function transactionUpdate(mutator) {
-            if (!firebaseEnabled) {
-                const local = normalizeFirebaseData(state);
-                if (mutator(local) !== false) { applyFirebaseDataToLocal(local); saveLocalState(); render(); }
-                return;
-            }
-            try {
-                const ref = database.ref(FIREBASE_PATH);
-                const res = await ref.transaction(cur => {
-                    const latest = normalizeFirebaseData(cur);
-                    return mutator(latest) === false ? cur : latest;
-                });
-                if (res?.snapshot) { applyFirebaseDataToLocal(res.snapshot.val()); render(); }
-            } catch(err) { alert("資料同步失敗"); }
-        }
-
-        function initFirebaseListener() {
-            if (!firebaseEnabled) { loadLocalState(); return; }
-            database.ref(FIREBASE_PATH).on("value", snap => { applyFirebaseDataToLocal(snap.val()); render(); });
-            database.ref(FIREBASE_PATH).transaction(cur => cur === null ? createEmptyFirebaseData() : cur);
-        }
-
-        function loadLocalState() {
-            try { applyFirebaseDataToLocal(JSON.parse(localStorage.getItem(STORAGE_KEY))); } catch(e) { applyFirebaseDataToLocal(null); }
-            render();
-        }
-
+        // ==========================================
+        // 8. 介面事件處理與動作 (UI Event Handlers)
+        // ==========================================
         function getAvailableWeekKeys() {
             const set = new Set(Object.keys(state.weeksData || {}));
             const base = getTuesdayOfWeek();
             for (let i = -1; i <= 2; i++) {
-                const d = new Date(base); d.setDate(d.getDate() + i * 7);
+                const d = new Date(base); 
+                d.setDate(d.getDate() + i * 7);
                 set.add(formatDateKey(d));
             }
             return Array.from(set).sort();
@@ -597,7 +689,9 @@
             selectWeek(formatDateKey(t));
         }
 
-        function jumpToCurrentWeek() { selectWeek(formatDateKey(getTuesdayOfWeek())); }
+        function jumpToCurrentWeek() { 
+            selectWeek(formatDateKey(getTuesdayOfWeek())); 
+        }
 
         function deleteCurrentWeek() {
             const wk = state.activeWeek;
@@ -612,7 +706,6 @@
 
         function switchTab(tab) { currentTab = tab; render(); }
         function selectGroup(idx) { state.activeGroup = idx; render(); }
-        function toggleFilterAvailable() { state.filterAvailableOnly = !state.filterAvailableOnly; render(); }
 
         function addTeamToCurrentGroup() {
             transactionUpdate(data => {
@@ -632,11 +725,17 @@
         }
 
         function updateTeamTime(tIdx, time) {
-            transactionUpdate(data => { data.weeksData[state.activeWeek].groups[state.activeGroup].teams[tIdx].time = String(time || "20:00"); return true; });
+            transactionUpdate(data => { 
+                data.weeksData[state.activeWeek].groups[state.activeGroup].teams[tIdx].time = String(time || "20:00"); 
+                return true; 
+            });
         }
 
         function updateTeamCon(tIdx, con) {
-            transactionUpdate(data => { data.weeksData[state.activeWeek].groups[state.activeGroup].teams[tIdx].con = Boolean(con); return true; });
+            transactionUpdate(data => { 
+                data.weeksData[state.activeWeek].groups[state.activeGroup].teams[tIdx].con = Boolean(con); 
+                return true; 
+            });
         }
 
         function updateTeamMemberPart(tIdx, mIdx, part) {
@@ -648,14 +747,10 @@
         }
 
         function updateGroupDate(idx, date) {
-            transactionUpdate(data => { data.weeksData[state.activeWeek].groups[idx].date = String(date); return true; });
-        }
-
-        function getWeekday(date) {
-            const parts = String(date).split("/");
-            if (parts.length < 2) return "";
-            const d = new Date(new Date().getFullYear(), Number(parts[0]) - 1, Number(parts[1]));
-            return isNaN(d) ? "" : ["日", "一", "二", "三", "四", "五", "六"][d.getDay()];
+            transactionUpdate(data => { 
+                data.weeksData[state.activeWeek].groups[idx].date = String(date); 
+                return true; 
+            });
         }
 
         function updatePlayerField(id, field, val) {
@@ -663,10 +758,13 @@
             transactionUpdate(data => {
                 const p = data.pool.find(item => String(item.id) === String(id));
                 if (p) p[field] = norm;
+                
                 for (const wk in data.weeksData) {
                     (data.weeksData[wk].groups || []).forEach(g => {
                         (g.teams || []).forEach(t => {
-                            (t.members || []).forEach(m => { if (String(m.id) === String(id)) m[field] = norm; });
+                            (t.members || []).forEach(m => { 
+                                if (String(m.id) === String(id)) m[field] = norm; 
+                            });
                         });
                     });
                 }
@@ -682,12 +780,16 @@
                     if (!p.availability[wk]) p.availability[wk] = ["", "", "", "", "", "", ""];
                     p.availability[wk][dayIdx] = String(val);
                 };
+                
                 const p = data.pool.find(item => String(item.id) === String(id));
                 if (p) update(p);
+                
                 for (const w in data.weeksData) {
                     (data.weeksData[w].groups || []).forEach(g => {
                         (g.teams || []).forEach(t => {
-                            (t.members || []).forEach(m => { if (String(m.id) === String(id)) update(m); });
+                            (t.members || []).forEach(m => { 
+                                if (String(m.id) === String(id)) update(m); 
+                            });
                         });
                     });
                 }
@@ -711,7 +813,9 @@
                 data.pool = data.pool.filter(p => String(p.id) !== String(id));
                 for (const wk in data.weeksData) {
                     (data.weeksData[wk].groups || []).forEach(g => {
-                        (g.teams || []).forEach(t => { t.members = (t.members || []).filter(m => String(m.id) !== String(id)); });
+                        (g.teams || []).forEach(t => { 
+                            t.members = (t.members || []).filter(m => String(m.id) !== String(id)); 
+                        });
                     });
                 }
                 return true;
@@ -723,21 +827,33 @@
                 const p = data.pool.find(item => String(item.id) === String(id));
                 const wData = data.weeksData[state.activeWeek];
                 const targetTeam = wData.groups[state.activeGroup].teams[tIdx];
-                if (hasReachedWeeklyLimit(p, wData)) { alert("此玩家本週已達出賽上限！"); return false; }
+                
+                if (hasReachedWeeklyLimit(p, wData)) { 
+                    alert("此玩家本週已達出賽上限！"); 
+                    return false; 
+                }
                 if (targetTeam.members.some(m => String(m.id) === String(id))) return false;
+                
                 targetTeam.members.push({ ...p });
                 return true;
             });
         }
 
         function removeFromTeam(tIdx, mIdx) {
-            transactionUpdate(data => { data.weeksData[state.activeWeek].groups[state.activeGroup].teams[tIdx].members.splice(mIdx, 1); return true; });
+            transactionUpdate(data => { 
+                data.weeksData[state.activeWeek].groups[state.activeGroup].teams[tIdx].members.splice(mIdx, 1); 
+                return true; 
+            });
         }
 
         function clearCurrentGroup() {
             if (!confirm("確定要清空當前團的所有隊伍成員嗎？")) return;
             transactionUpdate(data => {
-                (data.weeksData[state.activeWeek].groups[state.activeGroup].teams || []).forEach(t => { t.members = []; t.time = "20:00"; t.con = false; });
+                (data.weeksData[state.activeWeek].groups[state.activeGroup].teams || []).forEach(t => { 
+                    t.members = []; 
+                    t.time = "20:00"; 
+                    t.con = false; 
+                });
                 return true;
             });
         }
@@ -746,14 +862,38 @@
             if (!confirm("確定要清空全部資料嗎？")) return;
             const defKey = formatDateKey(getTuesdayOfWeek());
             transactionUpdate(data => {
-                data.pool = []; data.activeWeek = defKey;
+                data.pool = []; 
+                data.activeWeek = defKey;
                 data.weeksData = { [defKey]: { groups: createDefaultWeekGroups(defKey) } };
                 return true;
             });
         }
 
-        function escapeHtml(str) {
-            return String(str ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
+        // ==========================================
+        // 9. 視圖渲染與 HTML 生成 (DOM Rendering)
+        // ==========================================
+        function getJobColorClass(job) {
+            return JOB_STYLE_MAP[job]?.class || DEFAULT_JOB_CLASS;
+        }
+
+        function getJobOptionStyle(job) {
+            return JOB_STYLE_MAP[job]?.style || DEFAULT_JOB_STYLE;
+        }
+
+        function renderJobSelectOptions(currentJob) {
+            let html = `<option value="" style="${DEFAULT_JOB_STYLE}" ${!currentJob ? "selected" : ""}>職業</option>`;
+            JOB_LIST.forEach(job => {
+                html += `<option value="${job}" style="${getJobOptionStyle(job)}" ${currentJob === job ? "selected" : ""}>${job}</option>`;
+            });
+            return html;
+        }
+
+        function renderGroupSelectOptions(currentGroupId) {
+            let html = `<option value="" class="bg-slate-900 text-slate-500" ${!currentGroupId ? "selected" : ""}></option>`;
+            for (let i = 1; i <= 15; i++) {
+                html += `<option value="g${i}" class="bg-slate-900 text-amber-400 font-bold" ${currentGroupId === `g${i}` ? "selected" : ""}>大小號 ${i}</option>`;
+            }
+            return html;
         }
 
         function renderAvailabilitySelects(player) {
@@ -830,13 +970,9 @@
         function renderPool(isMasterView) {
             const idSuffix = isMasterView ? "master" : "teams";
             const wData = currentWeekData();
+            
+            // 修正：只要本週尚未達到出賽上限，通通顯示出來（不管是否有填寫該時段的時間）
             let displayPool = state.pool.filter(p => !hasReachedWeeklyLimit(p, wData));
-            if (!isMasterView && state.filterAvailableOnly) {
-                displayPool = displayPool.filter(p => {
-                    const av = getPlayerWeekAvailability(p, state.activeWeek);
-                    return av[state.activeGroup] && av[state.activeGroup].trim() !== "";
-                });
-            }
 
             const getIcon = f => poolSortState.field !== f ? '↕️' : (poolSortState.direction === 'asc' ? '▲' : '▼');
             const teams = currentGroup().teams || [];
@@ -855,7 +991,7 @@
             `;
 
             if (displayPool.length === 0) {
-                html += `<p class="text-center text-sm text-slate-500 py-6">目前沒有符合條件可分配的成員</p>`;
+                html += `<p class="text-center text-sm text-slate-500 py-6">目前沒有可分配的成員（所有成員皆已達到本週出賽上限）</p>`;
             } else {
                 displayPool.forEach((player, idx) => {
                     html += `
@@ -890,11 +1026,16 @@
             return html;
         }
 
+        // ==========================================
+        // 10. 拖曳元件初始化 (Sortable.js)
+        // ==========================================
         function initSortables() {
             sortableInstances.forEach(i => i.destroy());
             sortableInstances = [];
+            
             document.querySelectorAll(".sortable-list").forEach(el => {
                 if (el.closest(".hidden")) return;
+                
                 const inst = new Sortable(el, {
                     group: { name: "artale-shared-lists", pull: (to, from) => from.el.dataset.listType === "pool" ? "clone" : true },
                     draggable: ".drag-item",
@@ -904,30 +1045,44 @@
                     ghostClass: "sortable-ghost",
                     dragClass: "sortable-drag",
                     onEnd: function(evt) {
-                        const fromType = evt.from.dataset.listType, toType = evt.to.dataset.listType;
-                        const itemId = evt.item?.dataset?.id, newIndex = evt.newDraggableIndex ?? evt.newIndex;
-                        if (!itemId || fromType === toType && evt.oldDraggableIndex === newIndex) return;
+                        const fromType = evt.from.dataset.listType;
+                        const toType = evt.to.dataset.listType;
+                        const itemId = evt.item?.dataset?.id;
+                        const newIndex = evt.newDraggableIndex ?? evt.newIndex;
+                        
+                        if (!itemId || (fromType === toType && evt.oldDraggableIndex === newIndex)) return;
 
                         transactionUpdate(data => {
                             const p = data.pool.find(item => String(item.id) === String(itemId));
                             if (!p) return false;
+                            
+                            // 總名單內部拖曳排序
                             if (fromType === "pool" && toType === "pool") {
                                 data.pool = data.pool.filter(item => String(item.id) !== String(itemId));
                                 data.pool.splice(newIndex, 0, p);
                                 return true;
                             }
+                            
                             const wData = data.weeksData[state.activeWeek];
                             const targetGroup = wData.groups[state.activeGroup];
+                            
+                            // 從總名單拖入隊伍
                             if (fromType === "pool" && toType.startsWith("team_")) {
                                 const tIdx = parseInt(toType.replace("team_", ""), 10);
-                                if (hasReachedWeeklyLimit(p, wData)) { alert("已達本週出賽上限！"); return false; }
+                                if (hasReachedWeeklyLimit(p, wData)) { 
+                                    alert("已達本週出賽上限！"); 
+                                    return false; 
+                                }
                                 targetGroup.teams[tIdx].members.splice(newIndex, 0, { ...p });
                                 return true;
                             }
+                            
+                            // 隊伍間或隊伍內部拖曳
                             if (fromType.startsWith("team_") && toType.startsWith("team_")) {
                                 const sTeam = targetGroup.teams[parseInt(fromType.replace("team_", ""), 10)].members;
                                 const tTeam = targetGroup.teams[parseInt(toType.replace("team_", ""), 10)].members;
                                 const idx = sTeam.findIndex(item => String(item.id) === String(itemId));
+                                
                                 if (idx > -1) {
                                     const [moved] = sTeam.splice(idx, 1);
                                     tTeam.splice(newIndex, 0, moved);
@@ -942,6 +1097,9 @@
             });
         }
 
+        // ==========================================
+        // 11. 圖片匯出與 Modal 功能 (Export & Modal)
+        // ==========================================
         function formatShareHeader() {
             return `
                 <div class="share-row-item" style="border-bottom: 1px solid #334155; padding-bottom: 2px; margin-bottom: 4px; font-weight: 700; color: #94a3b8; font-size: 13px;">
@@ -1010,8 +1168,15 @@
             if (previewImages.length > 0) { currentImageIndex = 0; showModal(); }
         }
 
-        function showModal() { updateModalContent(); document.getElementById("image-modal").classList.remove("hidden"); }
-        function closeModal() { document.getElementById("image-modal").classList.add("hidden"); }
+        function showModal() { 
+            updateModalContent(); 
+            document.getElementById("image-modal").classList.remove("hidden"); 
+        }
+
+        function closeModal() { 
+            document.getElementById("image-modal").classList.add("hidden"); 
+        }
+
         function updateModalContent() {
             const item = previewImages[currentImageIndex];
             if (!item) return;
@@ -1021,7 +1186,13 @@
             document.getElementById("btn-prev").disabled = currentImageIndex === 0;
             document.getElementById("btn-next").disabled = currentImageIndex === previewImages.length - 1;
         }
-        function changeImage(step) { if (previewImages[currentImageIndex + step]) { currentImageIndex += step; updateModalContent(); } }
+
+        function changeImage(step) { 
+            if (previewImages[currentImageIndex + step]) { 
+                currentImageIndex += step; 
+                updateModalContent(); 
+            } 
+        }
 
         async function copyModalImage() {
             const btn = document.getElementById("btn-copy-img");
@@ -1030,7 +1201,9 @@
                 await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
                 btn.innerText = "✓ 已複製！";
                 setTimeout(() => btn.innerText = "📋 複製圖片", 1500);
-            } catch(e) { btn.innerText = "✕ 失敗"; }
+            } catch(e) { 
+                btn.innerText = "✕ 失敗"; 
+            }
         }
 
         function downloadModalImage() {
@@ -1040,20 +1213,29 @@
             link.click();
         }
 
+        // ==========================================
+        // 12. 主渲染進入點 (Main Render Routine)
+        // ==========================================
         function render() {
+            // 下拉選單週別更新
             const weekKeys = getAvailableWeekKeys();
             document.getElementById("week-select").innerHTML = weekKeys.map(wk => `<option value="${wk}" ${wk === state.activeWeek ? "selected" : ""}>${getWeekDisplayTitle(wk)}</option>`).join("");
             
+            // 刪除按鈕顯隱控制
             const delBtn = document.getElementById("btn-delete-week");
-            if (isTwoWeeksAgoOrEarlier(state.activeWeek)) delBtn.classList.remove("hidden"); else delBtn.classList.add("hidden");
+            if (isTwoWeeksAgoOrEarlier(state.activeWeek)) delBtn.classList.remove("hidden"); 
+            else delBtn.classList.add("hidden");
 
+            // 統計數據計算
             const wData = currentWeekData(), curGroup = currentGroup(), teamsList = curGroup.teams || createDefaultTeams();
-            let totalM = 0; teamsList.forEach(t => totalM += (t.members?.length || 0));
+            let totalM = 0; 
+            teamsList.forEach(t => totalM += (t.members?.length || 0));
 
             document.getElementById("master-tab-badge").innerText = `${state.pool.length}人`;
             document.getElementById("teams-tab-badge").innerText = `${totalM}/18`;
             document.getElementById("current-teams-count").innerText = teamsList.length;
 
+            // Tab 按鈕狀態
             const isMaster = currentTab === "master";
             document.getElementById("tab-btn-master").className = `flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold transition-all duration-200 ${isMaster ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"}`;
             document.getElementById("tab-btn-teams").className = `flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold transition-all duration-200 ${!isMaster ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"}`;
@@ -1061,6 +1243,7 @@
             document.getElementById("tab-content-master").classList.toggle("hidden", !isMaster);
             document.getElementById("tab-content-teams").classList.toggle("hidden", isMaster);
 
+            // 遠征團分頁
             document.getElementById("group-tabs").innerHTML = wData.groups.map((g, idx) => {
                 const wd = getWeekday(g.date);
                 return `
@@ -1074,13 +1257,16 @@
                 `;
             }).join("");
 
+            // 內容區塊渲染
             document.getElementById("master-view-container").innerHTML = renderPool(true);
             document.getElementById("teams-cards-container").innerHTML = renderTeamsContainer();
             document.getElementById("teams-pool-container").innerHTML = renderPool(false);
 
+            // 初始化 Sortable 拖曳綁定
             initSortables();
         }
 
+        // 啟動應用程式
         initFirebaseListener();
     </script>
 </body>

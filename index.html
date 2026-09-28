@@ -95,6 +95,12 @@
             margin-bottom: 1px;
             overflow: visible;
         }
+        .share-divider-line {
+            height: 1px;
+            background-color: #3b82f6;
+            margin: 6px 0;
+            opacity: 0.8;
+        }
         .share-col-level {
             width: 48px;
             text-align: right;
@@ -119,7 +125,7 @@
             flex-shrink: 0;
         }
         .share-col-part {
-            width: 50px;
+            width: 60px;
             color: #c084fc;
             font-size: 14px;
             flex-shrink: 0;
@@ -151,12 +157,15 @@
         </div>
 
         <!-- 分頁切換區塊 -->
-        <div class="mb-6 grid grid-cols-2 gap-2 rounded-xl border border-slate-800 bg-slate-900/90 p-1.5 shadow-md">
+        <div class="mb-6 grid grid-cols-3 gap-2 rounded-xl border border-slate-800 bg-slate-900/90 p-1.5 shadow-md">
             <button id="tab-btn-master" onclick="switchTab('master')" class="flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold transition-all duration-200">
                 <span>📋</span> 總名單 <span id="master-tab-badge" class="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-300">0人</span>
             </button>
             <button id="tab-btn-teams" onclick="switchTab('teams')" class="flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold transition-all duration-200">
-                <span>⚔️</span> 隊伍分配 <span id="teams-tab-badge" class="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-300">0/18</span>
+                <span>⚔️</span> 6人隊伍分配 <span id="teams-tab-badge" class="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-300">0/18</span>
+            </button>
+            <button id="tab-btn-teams2" onclick="switchTab('teams2')" class="flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold transition-all duration-200">
+                <span>⚔️</span> 12人隊伍分配 <span id="teams2-tab-badge" class="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-300">0/18</span>
             </button>
         </div>
 
@@ -167,11 +176,11 @@
                 <div id="master-view-container"></div>
             </div>
 
-            <!-- 隊伍分配頁面 -->
+            <!-- 隊伍分配頁面 1 (6人) -->
             <div id="tab-content-teams" class="space-y-6 hidden">
                 <div class="rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-sm">
                     <div class="flex flex-wrap items-center justify-between gap-3">
-                        <h2 class="text-base font-bold text-slate-200">遠征團管理</h2>
+                        <h2 class="text-base font-bold text-slate-200">遠征團管理 (6人)</h2>
                     </div>
                     <div id="group-tabs" class="mt-4 flex flex-wrap gap-3"></div>
                 </div>
@@ -182,8 +191,8 @@
                         📌 當前遠征團共有 <span id="current-teams-count" class="text-blue-400 font-bold">3</span> 支隊伍
                     </div>
                     <div class="flex items-center gap-2">
-                        <button onclick="addTeamToCurrentGroup()" class="rounded-lg border border-emerald-800 bg-emerald-950/60 px-3 py-1.5 text-xs font-bold text-emerald-300 hover:bg-emerald-900/50 transition">➕ 新增隊伍</button>
-                        <button onclick="removeTeamFromCurrentGroup()" class="rounded-lg border border-rose-900 bg-rose-950/60 px-3 py-1.5 text-xs font-bold text-rose-300 hover:bg-rose-900 transition">➖ 減少最後一隊</button>
+                        <button onclick="addTeamToCurrentGroup(false)" class="rounded-lg border border-emerald-800 bg-emerald-950/60 px-3 py-1.5 text-xs font-bold text-emerald-300 hover:bg-emerald-900/50 transition">➕ 新增隊伍</button>
+                        <button onclick="removeTeamFromCurrentGroup(false)" class="rounded-lg border border-rose-900 bg-rose-950/60 px-3 py-1.5 text-xs font-bold text-rose-300 hover:bg-rose-900 transition">➖ 減少最後一隊</button>
                     </div>
                 </div>
 
@@ -192,8 +201,39 @@
 
                 <div class="rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-sm">
                     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <button onclick="generateAllTeamsImage()" class="rounded-lg border border-blue-900 bg-blue-950/50 px-4 py-3 text-sm font-bold text-blue-300 transition hover:bg-blue-900/50">🖼️ 產生全部團隊圖片</button>
-                        <button onclick="clearCurrentGroup()" class="rounded-lg border border-slate-800 bg-slate-800 px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-slate-700">🧹 清空當前團隊伍</button>
+                        <button onclick="generateAllTeamsImage(false)" class="rounded-lg border border-blue-900 bg-blue-950/50 px-4 py-3 text-sm font-bold text-blue-300 transition hover:bg-blue-900/50">🖼️ 產生全部團隊圖片</button>
+                        <button onclick="clearCurrentGroup(false)" class="rounded-lg border border-slate-800 bg-slate-800 px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-slate-700">🧹 清空當前團隊伍</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 隊伍分配頁面 2 (12人，兩欄式緊湊版面) -->
+            <div id="tab-content-teams2" class="space-y-6 hidden">
+                <div class="rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-sm">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <h2 class="text-base font-bold text-slate-200">遠征團管理 (12人)</h2>
+                    </div>
+                    <div id="group-tabs-2" class="mt-4 flex flex-wrap gap-3"></div>
+                </div>
+
+                <!-- 隊伍管理操作列 -->
+                <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 px-5 py-3 shadow-sm">
+                    <div class="text-xs text-slate-400">
+                        📌 當前遠征團共有 <span id="current-teams-count-2" class="text-blue-400 font-bold">3</span> 支隊伍
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="addTeamToCurrentGroup(true)" class="rounded-lg border border-emerald-800 bg-emerald-950/60 px-3 py-1.5 text-xs font-bold text-emerald-300 hover:bg-emerald-900/50 transition">➕ 新增隊伍</button>
+                        <button onclick="removeTeamFromCurrentGroup(true)" class="rounded-lg border border-rose-900 bg-rose-950/60 px-3 py-1.5 text-xs font-bold text-rose-300 hover:bg-rose-900 transition">➖ 減少最後一隊</button>
+                    </div>
+                </div>
+
+                <div id="teams-cards-container-2" class="space-y-6"></div>
+                <div id="teams-pool-container-2"></div>
+
+                <div class="rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-sm">
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <button onclick="generateAllTeamsImage(true)" class="rounded-lg border border-blue-900 bg-blue-950/50 px-4 py-3 text-sm font-bold text-blue-300 transition hover:bg-blue-900/50">🖼️ 產生全部團隊圖片</button>
+                        <button onclick="clearCurrentGroup(true)" class="rounded-lg border border-slate-800 bg-slate-800 px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-slate-700">🧹 清空當前團隊伍</button>
                     </div>
                 </div>
             </div>
@@ -282,11 +322,13 @@
         let previewImages = [];
         let currentImageIndex = 0;
         let poolSortState = { field: null, direction: 'desc' };
-        let poolJobFilters = []; // 改為陣列支援職業多選篩選
+        let poolJobFilters = [];
+        let poolTagFilter = "all";
 
         let state = {
             activeWeek: formatDateKey(getTuesdayOfWeek()),
             activeGroup: 0,
+            activeGroup2: 0,
             filterAvailableOnly: true,
             pool: [],
             weeksData: {}
@@ -403,7 +445,7 @@
             return { 
                 activeWeek: defaultWeekKey, 
                 pool: [], 
-                weeksData: { [defaultWeekKey]: { groups: createDefaultWeekGroups(defaultWeekKey) } } 
+                weeksData: { [defaultWeekKey]: { groups: createDefaultWeekGroups(defaultWeekKey), groups2: createDefaultWeekGroups(defaultWeekKey) } } 
             };
         }
 
@@ -443,20 +485,22 @@
                 rounds: String(player.rounds || "7").trim(),
                 groupId: String(player.groupId || "").trim(),
                 part: String(player.part || ""),
+                treeKing: Boolean(player.treeKing), 
+                dragonKing: Boolean(player.dragonKing), 
                 availability: normalizePlayerAvailability(player.availability, wk),
                 note: String(player.note || player["備註"] || "").trim()
             };
         }
 
-        function normalizeWeekGroupData(weekData, wk) {
-            let groups = Array.isArray(weekData?.groups) ? weekData.groups.slice(0, MAX_GROUPS) : [];
+        function normalizeGroupsData(rawGroups, wk) {
+            let groups = Array.isArray(rawGroups) ? rawGroups.slice(0, MAX_GROUPS) : [];
             const defGroups = createDefaultWeekGroups(wk);
             
             while (groups.length < MAX_GROUPS) {
                 groups.push(defGroups[groups.length]);
             }
 
-            groups = groups.map((g, idx) => {
+            return groups.map((g, idx) => {
                 const teams = Array.isArray(g?.teams) ? g.teams.map((t, tIdx) => ({
                     name: t.name || `第${tIdx + 1}隊`,
                     emoji: t.emoji || "⚔️",
@@ -467,7 +511,13 @@
                 
                 return { teams, date: typeof g?.date === "string" && g.date ? g.date : defGroups[idx].date };
             });
-            return { groups };
+        }
+
+        function normalizeWeekGroupData(weekData, wk) {
+            return {
+                groups: normalizeGroupsData(weekData?.groups, wk),
+                groups2: normalizeGroupsData(weekData?.groups2 || weekData?.groups, wk)
+            };
         }
 
         function normalizeFirebaseData(data) {
@@ -483,7 +533,7 @@
                 }
             }
             if (!weeksData[activeWeek]) {
-                weeksData[activeWeek] = { groups: createDefaultWeekGroups(activeWeek) };
+                weeksData[activeWeek] = { groups: createDefaultWeekGroups(activeWeek), groups2: createDefaultWeekGroups(activeWeek) };
             }
             
             const pool = Array.isArray(data.pool) ? data.pool.map(p => normalizePlayer(p, activeWeek)).filter(Boolean) : [];
@@ -495,6 +545,7 @@
             state = {
                 activeWeek: norm.activeWeek,
                 activeGroup: Math.min(Math.max(state.activeGroup || 0, 0), MAX_GROUPS - 1),
+                activeGroup2: Math.min(Math.max(state.activeGroup2 || 0, 0), MAX_GROUPS - 1),
                 filterAvailableOnly: typeof state.filterAvailableOnly === "boolean" ? state.filterAvailableOnly : true,
                 pool: norm.pool,
                 weeksData: norm.weeksData
@@ -502,11 +553,12 @@
         }
 
         function currentWeekData() { 
-            return state.weeksData[state.activeWeek] || { groups: createDefaultWeekGroups(state.activeWeek) }; 
+            return state.weeksData[state.activeWeek] || { groups: createDefaultWeekGroups(state.activeWeek), groups2: createDefaultWeekGroups(state.activeWeek) }; 
         }
         
-        function currentGroup() { 
-            return currentWeekData().groups[state.activeGroup] || { teams: createDefaultTeams(), date: "" }; 
+        function currentGroup(isTeams2 = false) { 
+            const w = currentWeekData();
+            return (isTeams2 ? w.groups2 : w.groups)[isTeams2 ? state.activeGroup2 : state.activeGroup] || { teams: createDefaultTeams(), date: "" }; 
         }
 
         // ==========================================
@@ -586,15 +638,20 @@
         // 7. 商業邏輯運算 (Business Logic)
         // ==========================================
         function getPlayerWeeklyTeamCount(playerId, weekData) {
-            if (!weekData || !weekData.groups) return 0;
+            if (!weekData) return 0;
             let count = 0;
-            weekData.groups.forEach(group => {
-                (group.teams || []).forEach(team => {
-                    if (team && team.members && team.members.some(p => String(p.id) === String(playerId))) {
-                        count += team.con ? 2 : 1;
-                    }
+            const checkGroups = (gs) => {
+                if (!gs) return;
+                gs.forEach(group => {
+                    (group.teams || []).forEach(team => {
+                        if (team && team.members && team.members.some(p => String(p.id) === String(playerId))) {
+                            count += team.con ? 2 : 1;
+                        }
+                    });
                 });
-            });
+            };
+            checkGroups(weekData.groups);
+            checkGroups(weekData.groups2);
             return count;
         }
 
@@ -673,18 +730,25 @@
             render();
         }
 
-        function moveEntireTeamToTargetGroup(sTeamIdx, targetGroupIdx) {
+        function setPoolTagFilter(val) {
+            poolTagFilter = val;
+            render();
+        }
+
+        function moveEntireTeamToTargetGroup(sTeamIdx, targetGroupIdx, isTeams2 = false) {
             if (targetGroupIdx === "" || isNaN(targetGroupIdx)) return;
             const targetGIdx = parseInt(targetGroupIdx, 10);
-            if (targetGIdx === state.activeGroup) {
+            const activeG = isTeams2 ? state.activeGroup2 : state.activeGroup;
+            if (targetGIdx === activeG) {
                 alert("該隊伍已經在當前星期！");
                 return;
             }
 
             transactionUpdate(data => {
                 const wData = data.weeksData[state.activeWeek];
-                const srcGroup = wData.groups[state.activeGroup];
-                const targetGroup = wData.groups[targetGIdx];
+                const groupsArr = isTeams2 ? wData.groups2 : wData.groups;
+                const srcGroup = groupsArr[activeG];
+                const targetGroup = groupsArr[targetGIdx];
 
                 if (!srcGroup || !srcGroup.teams[sTeamIdx]) return false;
 
@@ -710,7 +774,7 @@
             });
         }
 
-        function moveTeamToTeam(sTeamIdx, targetTeamIdxStr) {
+        function moveTeamToTeam(sTeamIdx, targetTeamIdxStr, isTeams2 = false) {
             if (targetTeamIdxStr === "") return;
             const targetTeamIdx = parseInt(targetTeamIdxStr, 10);
             if (sTeamIdx === targetTeamIdx) {
@@ -719,7 +783,9 @@
             }
 
             transactionUpdate(data => {
-                const teams = data.weeksData[state.activeWeek].groups[state.activeGroup].teams;
+                const wData = data.weeksData[state.activeWeek];
+                const groupsArr = isTeams2 ? wData.groups2 : wData.groups;
+                const teams = groupsArr[isTeams2 ? state.activeGroup2 : state.activeGroup].teams;
                 if (!teams[sTeamIdx] || !teams[targetTeamIdx]) return false;
 
                 const sourceTeam = teams[sTeamIdx];
@@ -752,7 +818,7 @@
             if (!wk) return;
             transactionUpdate(data => {
                 data.activeWeek = wk;
-                if (!data.weeksData[wk]) data.weeksData[wk] = { groups: createDefaultWeekGroups(wk) };
+                if (!data.weeksData[wk]) data.weeksData[wk] = { groups: createDefaultWeekGroups(wk), groups2: createDefaultWeekGroups(wk) };
                 return true;
             });
         }
@@ -774,25 +840,33 @@
             transactionUpdate(data => {
                 delete data.weeksData[wk];
                 data.activeWeek = formatDateKey(getTuesdayOfWeek());
-                if (!data.weeksData[data.activeWeek]) data.weeksData[data.activeWeek] = { groups: createDefaultWeekGroups(data.activeWeek) };
+                if (!data.weeksData[data.activeWeek]) data.weeksData[data.activeWeek] = { groups: createDefaultWeekGroups(data.activeWeek), groups2: createDefaultWeekGroups(data.activeWeek) };
                 return true;
             });
         }
 
         function switchTab(tab) { currentTab = tab; render(); }
-        function selectGroup(idx) { state.activeGroup = idx; render(); }
+        function selectGroup(idx, isTeams2 = false) { 
+            if (isTeams2) state.activeGroup2 = idx;
+            else state.activeGroup = idx;
+            render(); 
+        }
 
-        function addTeamToCurrentGroup() {
+        function addTeamToCurrentGroup(isTeams2 = false) {
             transactionUpdate(data => {
-                const g = data.weeksData[state.activeWeek].groups[state.activeGroup];
+                const wData = data.weeksData[state.activeWeek];
+                const groupsArr = isTeams2 ? wData.groups2 : wData.groups;
+                const g = groupsArr[isTeams2 ? state.activeGroup2 : state.activeGroup];
                 g.teams.push({ name: `第${g.teams.length + 1}隊`, emoji: "⚔️", time: "20:00", con: false, members: [] });
                 return true;
             });
         }
 
-        function removeTeamFromCurrentGroup() {
+        function removeTeamFromCurrentGroup(isTeams2 = false) {
             transactionUpdate(data => {
-                const g = data.weeksData[state.activeWeek].groups[state.activeGroup];
+                const wData = data.weeksData[state.activeWeek];
+                const groupsArr = isTeams2 ? wData.groups2 : wData.groups;
+                const g = groupsArr[isTeams2 ? state.activeGroup2 : state.activeGroup];
                 if (g.teams.length === 0) {
                     alert("目前已經沒有隊伍！");
                     return false;
@@ -812,38 +886,38 @@
             });
         }
 
-        function updateTeamName(tIdx, name) {
+        function updateTeamName(tIdx, name, isTeams2 = false) {
             transactionUpdate(data => { 
-                data.weeksData[state.activeWeek].groups[state.activeGroup].teams[tIdx].name = String(name || `第${tIdx + 1}隊`); 
+                const wData = data.weeksData[state.activeWeek];
+                const groupsArr = isTeams2 ? wData.groups2 : wData.groups;
+                groupsArr[isTeams2 ? state.activeGroup2 : state.activeGroup].teams[tIdx].name = String(name || `第${tIdx + 1}隊`); 
                 return true; 
             });
         }
 
-        function updateTeamTime(tIdx, time) {
+        function updateTeamTime(tIdx, time, isTeams2 = false) {
             transactionUpdate(data => { 
-                data.weeksData[state.activeWeek].groups[state.activeGroup].teams[tIdx].time = String(time || "20:00"); 
+                const wData = data.weeksData[state.activeWeek];
+                const groupsArr = isTeams2 ? wData.groups2 : wData.groups;
+                groupsArr[isTeams2 ? state.activeGroup2 : state.activeGroup].teams[tIdx].time = String(time || "20:00"); 
                 return true; 
             });
         }
 
-        function updateTeamCon(tIdx, con) {
+        function updateTeamCon(tIdx, con, isTeams2 = false) {
             transactionUpdate(data => { 
-                data.weeksData[state.activeWeek].groups[state.activeGroup].teams[tIdx].con = Boolean(con); 
+                const wData = data.weeksData[state.activeWeek];
+                const groupsArr = isTeams2 ? wData.groups2 : wData.groups;
+                groupsArr[isTeams2 ? state.activeGroup2 : state.activeGroup].teams[tIdx].con = Boolean(con); 
                 return true; 
             });
         }
 
-        function updateTeamMemberPart(tIdx, mIdx, part) {
-            transactionUpdate(data => {
-                const m = data.weeksData[state.activeWeek].groups[state.activeGroup].teams[tIdx].members[mIdx];
-                m.part = (m.part === part) ? "" : part;
-                return true;
-            });
-        }
-
-        function updateGroupDate(idx, date) {
+        function updateGroupDate(idx, date, isTeams2 = false) {
             transactionUpdate(data => { 
-                data.weeksData[state.activeWeek].groups[idx].date = String(date); 
+                const wData = data.weeksData[state.activeWeek];
+                const groupsArr = isTeams2 ? wData.groups2 : wData.groups;
+                groupsArr[idx].date = String(date); 
                 return true; 
             });
         }
@@ -855,13 +929,41 @@
                 if (p) p[field] = norm;
                 
                 for (const wk in data.weeksData) {
-                    (data.weeksData[wk].groups || []).forEach(g => {
-                        (g.teams || []).forEach(t => {
-                            (t.members || []).forEach(m => { 
-                                if (String(m.id) === String(id)) m[field] = norm; 
+                    const checkGs = (gs) => {
+                        if (!gs) return;
+                        gs.forEach(g => {
+                            (g.teams || []).forEach(t => {
+                                (t.members || []).forEach(m => { 
+                                    if (String(m.id) === String(id)) m[field] = norm; 
+                                });
                             });
                         });
-                    });
+                    };
+                    checkGs(data.weeksData[wk].groups);
+                    checkGs(data.weeksData[wk].groups2);
+                }
+                return true;
+            });
+        }
+
+        function updatePlayerTag(id, tagField, checked) {
+            transactionUpdate(data => {
+                const p = data.pool.find(item => String(item.id) === String(id));
+                if (p) p[tagField] = Boolean(checked);
+                
+                for (const wk in data.weeksData) {
+                    const checkGs = (gs) => {
+                        if (!gs) return;
+                        gs.forEach(g => {
+                            (g.teams || []).forEach(t => {
+                                (t.members || []).forEach(m => { 
+                                    if (String(m.id) === String(id)) m[tagField] = Boolean(checked); 
+                                });
+                            });
+                        });
+                    };
+                    checkGs(data.weeksData[wk].groups);
+                    checkGs(data.weeksData[wk].groups2);
                 }
                 return true;
             });
@@ -880,13 +982,18 @@
                 if (p) update(p);
                 
                 for (const w in data.weeksData) {
-                    (data.weeksData[w].groups || []).forEach(g => {
-                        (g.teams || []).forEach(t => {
-                            (t.members || []).forEach(m => { 
-                                if (String(m.id) === String(id)) update(m); 
+                    const checkGs = (gs) => {
+                        if (!gs) return;
+                        gs.forEach(g => {
+                            (g.teams || []).forEach(t => {
+                                (t.members || []).forEach(m => { 
+                                    if (String(m.id) === String(id)) update(m); 
+                                });
                             });
                         });
-                    });
+                    };
+                    checkGs(data.weeksData[w].groups);
+                    checkGs(data.weeksData[w].groups2);
                 }
                 return true;
             });
@@ -896,6 +1003,7 @@
             transactionUpdate(data => {
                 data.pool.push({
                     id: makeId(), level: "", name: "", job: "", position: "", rounds: "7", groupId: "", part: "",
+                    treeKing: false, dragonKing: false,
                     availability: { [state.activeWeek]: ["", "", "", "", "", "", ""] }, note: ""
                 });
                 return true;
@@ -907,21 +1015,27 @@
             transactionUpdate(data => {
                 data.pool = data.pool.filter(p => String(p.id) !== String(id));
                 for (const wk in data.weeksData) {
-                    (data.weeksData[wk].groups || []).forEach(g => {
-                        (g.teams || []).forEach(t => { 
-                            t.members = (t.members || []).filter(m => String(m.id) !== String(id)); 
+                    const cleanGs = (gs) => {
+                        if (!gs) return;
+                        gs.forEach(g => {
+                            (g.teams || []).forEach(t => { 
+                                t.members = (t.members || []).filter(m => String(m.id) !== String(id)); 
+                            });
                         });
-                    });
+                    };
+                    cleanGs(data.weeksData[wk].groups);
+                    cleanGs(data.weeksData[wk].groups2);
                 }
                 return true;
             });
         }
 
-        function sendToTeam(id, tIdx) {
+        function sendToTeam(id, tIdx, isTeams2 = false) {
             transactionUpdate(data => {
                 const p = data.pool.find(item => String(item.id) === String(id));
                 const wData = data.weeksData[state.activeWeek];
-                const targetTeam = wData.groups[state.activeGroup].teams[tIdx];
+                const groupsArr = isTeams2 ? wData.groups2 : wData.groups;
+                const targetTeam = groupsArr[isTeams2 ? state.activeGroup2 : state.activeGroup].teams[tIdx];
                 
                 if (hasReachedWeeklyLimit(p, wData)) { 
                     alert("此玩家本週已達出賽上限！"); 
@@ -934,17 +1048,22 @@
             });
         }
 
-        function removeFromTeam(tIdx, mIdx) {
+        function removeFromTeam(tIdx, mIdx, isTeams2 = false) {
             transactionUpdate(data => { 
-                data.weeksData[state.activeWeek].groups[state.activeGroup].teams[tIdx].members.splice(mIdx, 1); 
+                const wData = data.weeksData[state.activeWeek];
+                const groupsArr = isTeams2 ? wData.groups2 : wData.groups;
+                groupsArr[isTeams2 ? state.activeGroup2 : state.activeGroup].teams[tIdx].members.splice(mIdx, 1); 
                 return true; 
             });
         }
 
-        function clearCurrentGroup() {
-            if (!confirm("確定要清空當前團的所有隊伍成員嗎？")) return;
+        function clearCurrentGroup(isTeams2 = false) {
+            const teamTypeText = isTeams2 ? "12人團隊" : "6人團隊";
+            if (!confirm(`確定要清空當前${teamTypeText}的所有隊伍成員嗎？`)) return;
             transactionUpdate(data => {
-                (data.weeksData[state.activeWeek].groups[state.activeGroup].teams || []).forEach(t => { 
+                const wData = data.weeksData[state.activeWeek];
+                const groupsArr = isTeams2 ? wData.groups2 : wData.groups;
+                (groupsArr[isTeams2 ? state.activeGroup2 : state.activeGroup].teams || []).forEach(t => { 
                     t.members = []; 
                     t.time = "20:00"; 
                     t.con = false; 
@@ -995,44 +1114,88 @@
             `).join("");
         }
 
-        function memberCard(player, idx, tIdx) {
+        // 6人分配的成員卡片 (維持原本完整欄位)
+        function memberCard(player, idx, tIdx, isTeams2 = false) {
             return `
                 <div data-id="${escapeHtml(player.id)}" class="drag-item flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950 p-2.5 transition">
                     <div class="min-w-0 pr-1 flex-1 flex items-center gap-1.5 flex-wrap">
                         <span class="text-xs text-slate-500">#${idx + 1}</span>
+                        
                         <input type="text" value="${escapeHtml(getPlayerLevel(player))}" maxlength="3" onchange="updatePlayerField('${player.id}', 'level', this.value)" class="w-8 rounded border border-slate-800 bg-slate-900 px-1 py-0.5 text-center text-xs text-blue-400">
+                        
                         <select onchange="updatePlayerField('${player.id}', 'job', this.value)" class="w-20 rounded border px-1 py-0.5 text-xs ${getJobColorClass(player.job)}">
                             ${renderJobSelectOptions(player.job)}
                         </select>
+                        
                         <input type="text" value="${escapeHtml(player.name)}" onchange="updatePlayerField('${player.id}', 'name', this.value)" class="w-20 rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-200 font-bold">
+                        
                         <input type="text" value="${escapeHtml(player.position)}" placeholder="AD/AP" onchange="updatePlayerField('${player.id}', 'position', this.value)" class="w-14 rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-300">
                         
                         <div class="flex items-center gap-1 bg-purple-950/40 px-2 py-0.5 rounded border border-purple-900/60">
                             <label class="flex items-center gap-1 text-[11px] text-purple-300 cursor-pointer">
-                                <input type="checkbox" ${player.part === "first" ? "checked" : ""} onchange="updateTeamMemberPart(${tIdx}, ${idx}, 'first')"> 前7
+                                <input type="checkbox" ${player.part === "first" ? "checked" : ""} onchange="updateTeamMemberPart(${tIdx}, ${idx}, 'first', ${isTeams2})"> 前7
                             </label>
                             <label class="flex items-center gap-1 text-[11px] text-purple-300 cursor-pointer ml-1">
-                                <input type="checkbox" ${player.part === "second" ? "checked" : ""} onchange="updateTeamMemberPart(${tIdx}, ${idx}, 'second')"> 後7
+                                <input type="checkbox" ${player.part === "second" ? "checked" : ""} onchange="updateTeamMemberPart(${tIdx}, ${idx}, 'second', ${isTeams2})"> 後7
                             </label>
                         </div>
+
                         <div class="flex items-center gap-1 bg-slate-900/60 p-1 rounded border border-slate-800">${renderAvailabilitySelects(player)}</div>
+
                         <select onchange="updatePlayerField('${player.id}', 'rounds', this.value)" class="rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-200">
                             <option value="7" ${player.rounds === "7" ? "selected" : ""}>7場</option>
                             <option value="14" ${player.rounds === "14" ? "selected" : ""}>14場</option>
                         </select>
+
+                        <div class="flex items-center gap-1.5">
+                            <label class="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded border cursor-pointer ${player.treeKing ? 'bg-emerald-950 border-emerald-600 text-emerald-300 font-bold' : 'bg-slate-900 border-slate-800 text-slate-500'}">
+                                <input type="checkbox" ${player.treeKing ? "checked" : ""} onchange="updatePlayerTag('${player.id}', 'treeKing', this.checked)"> 樹王
+                            </label>
+                            <label class="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded border cursor-pointer ${player.dragonKing ? 'bg-amber-950 border-amber-500 text-amber-300 font-bold' : 'bg-slate-900 border-slate-800 text-slate-500'}">
+                                <input type="checkbox" ${player.dragonKing ? "checked" : ""} onchange="updatePlayerTag('${player.id}', 'dragonKing', this.checked)"> 龍王
+                            </label>
+                        </div>
+
                         <input type="text" value="${escapeHtml(player.note || '')}" placeholder="備註" onchange="updatePlayerField('${player.id}', 'note', this.value)" class="w-28 rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-400">
                     </div>
-                    <button onclick="removeFromTeam(${tIdx}, ${idx})" class="rounded bg-slate-900 border border-slate-800 px-2 py-1 text-xs text-rose-400">✕</button>
+                    <button onclick="removeFromTeam(${tIdx}, ${idx}, ${isTeams2})" class="rounded bg-slate-900 border border-slate-800 px-2 py-1 text-xs text-rose-400">✕</button>
                 </div>
             `;
         }
 
-        function renderTeamsContainer() {
+        // 12人分配專用的精簡成員卡片：完全對齊圖片範例版面 (#編號, Lv. 等級, 職業, 名字, 備註, 刪除按鈕)
+        function memberCardTeams2(player, idx, tIdx) {
+            return `
+                <div data-id="${escapeHtml(player.id)}" class="drag-item flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 transition shadow-sm">
+                    <div class="flex items-center gap-2 flex-1 min-w-0 flex-wrap">
+                        <span class="text-xs font-semibold text-slate-400 w-6">#${idx + 1}</span>
+                        
+                        <div class="flex items-center gap-1 bg-slate-900 border border-slate-800 rounded px-1.5 py-1">
+                            <span class="text-[11px] text-blue-400 font-semibold">Lv.</span>
+                            <input type="text" value="${escapeHtml(getPlayerLevel(player))}" maxlength="3" onchange="updatePlayerField('${player.id}', 'level', this.value)" class="w-9 bg-transparent text-center text-xs text-blue-300 font-bold focus:outline-none" placeholder="000">
+                        </div>
+                        
+                        <select onchange="updatePlayerField('${player.id}', 'job', this.value)" class="w-24 rounded border px-2 py-1 text-xs ${getJobColorClass(player.job)}">
+                            ${renderJobSelectOptions(player.job)}
+                        </select>
+                        
+                        <input type="text" value="${escapeHtml(player.name)}" onchange="updatePlayerField('${player.id}', 'name', this.value)" class="w-28 rounded border border-slate-800 bg-slate-900 px-2 py-1 text-xs text-slate-200 font-bold" placeholder="名字">
+                        
+                        <input type="text" value="${escapeHtml(player.note || '')}" placeholder="備註" onchange="updatePlayerField('${player.id}', 'note', this.value)" class="w-20 rounded border border-slate-800 bg-slate-900 px-2 py-1 text-xs text-amber-300 placeholder-slate-600">
+                    </div>
+                    <button onclick="removeFromTeam(${tIdx}, ${idx}, true)" class="rounded bg-slate-900 border border-slate-800 px-2 py-1 text-xs text-rose-400 hover:bg-rose-950 transition ml-2">✕</button>
+                </div>
+            `;
+        }
+
+        function renderTeamsContainer(isTeams2 = false) {
             let html = "";
-            const currentTeams = currentGroup().teams || [];
+            const currentTeams = currentGroup(isTeams2).teams || [];
+            const activeGroupIdx = isTeams2 ? state.activeGroup2 : state.activeGroup;
+            const listTypePrefix = isTeams2 ? "team2_" : "team_";
 
             const otherDayOptions = GROUP_NAMES.map((name, gIdx) => {
-                if (gIdx === state.activeGroup) return '';
+                if (gIdx === activeGroupIdx) return '';
                 return `<option value="${gIdx}">移至 ${name}</option>`;
             }).join("");
 
@@ -1050,38 +1213,42 @@
                     }
                 });
 
+                // 12人模式套用 2 欄式 Grid 佈局（符合圖片左右並排配置），6人模式維持單欄
+                const gridClass = isTeams2 ? "grid grid-cols-1 md:grid-cols-2 gap-3" : "flex flex-col gap-3";
+
                 html += `
                     <div class="rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-sm">
                         <div class="mb-4 flex items-center justify-between border-b border-slate-800 pb-3 flex-wrap gap-3">
                             <div class="flex items-center gap-3 flex-wrap">
                                 <span class="text-lg">⚔️</span>
-                                <input type="text" value="${escapeHtml(team.name)}" onchange="updateTeamName(${tIdx}, this.value)" class="w-24 rounded border border-slate-700 bg-slate-950 px-2 py-1 text-base font-bold text-blue-300">
-                                <input type="text" value="${escapeHtml(team.time || "20:00")}" maxlength="5" onchange="updateTeamTime(${tIdx}, this.value)" class="w-16 rounded border border-slate-800 bg-slate-900 px-1 py-0.5 text-center text-xs text-blue-400 font-bold">
+                                <input type="text" value="${escapeHtml(team.name)}" onchange="updateTeamName(${tIdx}, this.value, ${isTeams2})" class="w-24 rounded border border-slate-700 bg-slate-950 px-2 py-1 text-base font-bold text-blue-300">
+                                <input type="text" value="${escapeHtml(team.time || "20:00")}" maxlength="5" onchange="updateTeamTime(${tIdx}, this.value, ${isTeams2})" class="w-16 rounded border border-slate-800 bg-slate-900 px-1 py-0.5 text-center text-xs text-blue-400 font-bold">
+                                ${!isTeams2 ? `
                                 <label class="flex items-center gap-1 text-xs text-amber-300 bg-amber-950/60 border border-amber-900 px-2.5 py-1 rounded-lg cursor-pointer">
-                                    <input type="checkbox" ${team.con ? "checked" : ""} onchange="updateTeamCon(${tIdx}, this.checked)"> 連14場
-                                </label>
+                                    <input type="checkbox" ${team.con ? "checked" : ""} onchange="updateTeamCon(${tIdx}, this.checked, false)"> 連14場
+                                </label>` : ''}
                             </div>
 
                             <div class="flex items-center gap-2 flex-wrap">
                                 <div class="flex items-center gap-1 bg-slate-800/60 p-1 rounded-lg border border-slate-700">
-                                    <select id="move-to-team-${tIdx}" class="rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-slate-200">
+                                    <select id="move-to-team-${isTeams2 ? '2_' : ''}${tIdx}" class="rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-slate-200">
                                         ${otherTeamsOptions}
                                     </select>
-                                    <button onclick="moveTeamToTeam(${tIdx}, document.getElementById('move-to-team-${tIdx}').value)" class="rounded bg-slate-700 hover:bg-slate-600 px-2.5 py-1 text-xs font-bold text-slate-200 transition">確認轉移</button>
+                                    <button onclick="moveTeamToTeam(${tIdx}, document.getElementById('move-to-team-${isTeams2 ? '2_' : ''}${tIdx}').value, ${isTeams2})" class="rounded bg-slate-700 hover:bg-slate-600 px-2.5 py-1 text-xs font-bold text-slate-200 transition">確認轉移</button>
                                 </div>
 
                                 <div class="flex items-center gap-1 bg-blue-950/60 p-1 rounded-lg border border-blue-800/80">
-                                    <select id="move-team-select-${tIdx}" class="rounded border border-blue-700 bg-slate-900 px-2 py-1 text-xs text-blue-300 font-bold">
+                                    <select id="move-team-select-${isTeams2 ? '2_' : ''}${tIdx}" class="rounded border border-blue-700 bg-slate-900 px-2 py-1 text-xs text-blue-300 font-bold">
                                         <option value="">移至其他週</option>
                                         ${otherDayOptions}
                                     </select>
-                                    <button onclick="moveEntireTeamToTargetGroup(${tIdx}, document.getElementById('move-team-select-${tIdx}').value)" class="rounded bg-blue-600 hover:bg-blue-500 px-2.5 py-1 text-xs font-bold text-white transition">確認轉移</button>
+                                    <button onclick="moveEntireTeamToTargetGroup(${tIdx}, document.getElementById('move-team-select-${isTeams2 ? '2_' : ''}${tIdx}').value, ${isTeams2})" class="rounded bg-blue-600 hover:bg-blue-500 px-2.5 py-1 text-xs font-bold text-white transition">確認轉移</button>
                                 </div>
                                 <span class="rounded-full bg-slate-800 px-2.5 py-1 text-xs text-slate-300">${members.length} 人</span>
                             </div>
                         </div>
-                        <div id="team_${tIdx}-list" data-list-type="team_${tIdx}" class="sortable-list grid min-h-[80px] gap-3">
-                            ${members.length === 0 ? `<p class="text-center text-xs text-slate-500 py-4">此隊伍目前暫無成員</p>` : members.map((m, mIdx) => memberCard(m, mIdx, tIdx)).join("")}
+                        <div id="${listTypePrefix}${tIdx}-list" data-list-type="${listTypePrefix}${tIdx}" class="sortable-list ${gridClass} min-h-[80px]">
+                            ${members.length === 0 ? `<p class="col-span-full text-center text-xs text-slate-500 py-4">此隊伍目前暫無成員</p>` : members.map((m, mIdx) => isTeams2 ? memberCardTeams2(m, mIdx, tIdx) : memberCard(m, mIdx, tIdx, false)).join("")}
                         </div>
                     </div>
                 `;
@@ -1089,27 +1256,33 @@
             return html;
         }
 
-        function renderPool(isMasterView) {
-            const idSuffix = isMasterView ? "master" : "teams";
+        function renderPool(isMasterView, isTeams2 = false) {
+            const idSuffix = isMasterView ? "master" : (isTeams2 ? "teams2" : "teams");
             const wData = currentWeekData();
             
             let displayPool = isMasterView 
                 ? state.pool 
                 : state.pool.filter(p => !hasReachedWeeklyLimit(p, wData));
 
-            // 套用職業多選篩選
             if (poolJobFilters.length > 0) {
                 displayPool = displayPool.filter(p => poolJobFilters.includes(String(p.job || "").trim()));
             }
 
-            const getIcon = f => poolSortState.field !== f ? '↕️' : (poolSortState.direction === 'asc' ? '▲' : '▼');
-            const teams = currentGroup().teams || [];
+            if (poolTagFilter === "treeKing") {
+                displayPool = displayPool.filter(p => p.treeKing);
+            } else if (poolTagFilter === "dragonKing") {
+                displayPool = displayPool.filter(p => p.dragonKing);
+            } else if (poolTagFilter === "both") {
+                displayPool = displayPool.filter(p => p.treeKing || p.dragonKing);
+            }
 
-            // 產生職業勾選方塊介面
+            const getIcon = f => poolSortState.field !== f ? '↕️' : (poolSortState.direction === 'asc' ? '▲' : '▼');
+            const teams = currentGroup(isTeams2).teams || [];
+
             let jobCheckboxesHtml = `
-                <div class="flex flex-wrap items-center gap-1.5 bg-slate-950 p-2 rounded-lg border border-slate-800 mb-3">
+                <div class="flex flex-wrap items-center gap-1.5 bg-slate-950 p-2 rounded-lg border border-slate-800 mb-2">
                     <span class="text-xs text-slate-400 mr-1 font-semibold">職業篩選：</span>
-                    <button onclick="clearAllJobFilters()" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition mr-1">全選/清除</button>
+                    <button onclick="clearAllJobFilters()" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition mr-1">清除職業</button>
             `;
             JOB_LIST.forEach(j => {
                 const isChecked = poolJobFilters.includes(j);
@@ -1144,24 +1317,41 @@
                         <div data-id="${escapeHtml(player.id)}" class="drag-item flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950 p-2.5 text-sm">
                             <div class="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
                                 <span class="text-xs text-slate-500">#${idx + 1}</span>
+                                
                                 <input type="text" value="${escapeHtml(getPlayerLevel(player))}" maxlength="3" onchange="updatePlayerField('${player.id}', 'level', this.value)" class="w-8 rounded border border-slate-800 bg-slate-900 px-1 py-0.5 text-center text-xs text-blue-400">
+                                
                                 <select onchange="updatePlayerField('${player.id}', 'job', this.value)" class="w-20 rounded border px-1 py-0.5 text-xs ${getJobColorClass(player.job)}">
                                     ${renderJobSelectOptions(player.job)}
                                 </select>
+                                
                                 <input type="text" value="${escapeHtml(player.name)}" onchange="updatePlayerField('${player.id}', 'name', this.value)" class="w-20 rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-200 font-bold">
+                                
                                 <input type="text" value="${escapeHtml(player.position)}" placeholder="AD/AP" onchange="updatePlayerField('${player.id}', 'position', this.value)" class="w-14 rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-300">
+                                
+                                <select onchange="updatePlayerField('${player.id}', 'groupId', this.value)" class="w-22 rounded border border-amber-900 bg-amber-950/40 px-1 py-0.5 text-xs text-amber-300">
+                                    ${renderGroupSelectOptions(player.groupId)}
+                                </select>
+
                                 <div class="flex items-center gap-1 bg-slate-900/60 p-1 rounded border border-slate-800">${renderAvailabilitySelects(player)}</div>
+
                                 <select onchange="updatePlayerField('${player.id}', 'rounds', this.value)" class="rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-200">
                                     <option value="7" ${player.rounds === "7" ? "selected" : ""}>7場</option>
                                     <option value="14" ${player.rounds === "14" ? "selected" : ""}>14場</option>
                                 </select>
-                                <select onchange="updatePlayerField('${player.id}', 'groupId', this.value)" class="w-22 rounded border border-amber-900 bg-amber-950/40 px-1 py-0.5 text-xs text-amber-300">
-                                    ${renderGroupSelectOptions(player.groupId)}
-                                </select>
+
+                                <div class="flex items-center gap-1.5">
+                                    <label class="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded border cursor-pointer ${player.treeKing ? 'bg-emerald-950 border-emerald-600 text-emerald-300 font-bold' : 'bg-slate-900 border-slate-800 text-slate-500'}">
+                                        <input type="checkbox" ${player.treeKing ? "checked" : ""} onchange="updatePlayerTag('${player.id}', 'treeKing', this.checked)"> 樹王
+                                    </label>
+                                    <label class="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded border cursor-pointer ${player.dragonKing ? 'bg-amber-950 border-amber-500 text-amber-300 font-bold' : 'bg-slate-900 border-slate-800 text-slate-500'}">
+                                        <input type="checkbox" ${player.dragonKing ? "checked" : ""} onchange="updatePlayerTag('${player.id}', 'dragonKing', this.checked)"> 龍王
+                                    </label>
+                                </div>
+
                                 <input type="text" value="${escapeHtml(player.note || '')}" placeholder="備註" onchange="updatePlayerField('${player.id}', 'note', this.value)" class="w-28 rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-400">
                             </div>
                             <div class="flex items-center gap-1 shrink-0 ml-2">
-                                ${!isMasterView ? teams.map((t, tIdx) => `<button onclick="sendToTeam('${player.id}',${tIdx})" class="rounded border border-blue-900 bg-blue-950 px-2 py-1 text-xs text-blue-300">+${escapeHtml(t.name)}</button>`).join('') : ''}
+                                ${!isMasterView ? teams.map((t, tIdx) => `<button onclick="sendToTeam('${player.id}', ${tIdx},${isTeams2})" class="rounded border border-blue-900 bg-blue-950 px-2 py-1 text-xs text-blue-300">+${escapeHtml(t.name)}</button>`).join('') : ''}
                                 <button onclick="deletePoolPlayer('${player.id}')" class="rounded bg-slate-900 border border-slate-800 px-2 py-1 text-xs text-rose-400">✕</button>
                             </div>
                         </div>
@@ -1209,10 +1399,12 @@
                             }
                             
                             const wData = data.weeksData[state.activeWeek];
-                            const targetGroup = wData.groups[state.activeGroup];
+                            const isT2 = toType.startsWith("team2_");
+                            const groupsArr = isT2 ? wData.groups2 : wData.groups;
+                            const targetGroup = groupsArr[isT2 ? state.activeGroup2 : state.activeGroup];
                             
-                            if (fromType === "pool" && toType.startsWith("team_")) {
-                                const tIdx = parseInt(toType.replace("team_", ""), 10);
+                            if (fromType === "pool" && (toType.startsWith("team_") || toType.startsWith("team2_"))) {
+                                const tIdx = parseInt(toType.replace(/team2?_/, ""), 10);
                                 if (hasReachedWeeklyLimit(p, wData)) { 
                                     alert("已達本週出賽上限！"); 
                                     return false; 
@@ -1221,9 +1413,11 @@
                                 return true;
                             }
                             
-                            if (fromType.startsWith("team_") && toType.startsWith("team_")) {
-                                const sTeam = targetGroup.teams[parseInt(fromType.replace("team_", ""), 10)].members;
-                                const tTeam = targetGroup.teams[parseInt(toType.replace("team_", ""), 10)].members;
+                            if ((fromType.startsWith("team_") || fromType.startsWith("team2_")) && (toType.startsWith("team_") || toType.startsWith("team2_"))) {
+                                const fromIsT2 = fromType.startsWith("team2_");
+                                const fromGroups = fromIsT2 ? wData.groups2 : wData.groups;
+                                const sTeam = fromGroups[fromIsT2 ? state.activeGroup2 : state.activeGroup].teams[parseInt(fromType.replace(/team2?_/, ""), 10)].members;
+                                const tTeam = targetGroup.teams[parseInt(toType.replace(/team2?_/, ""), 10)].members;
                                 const idx = sTeam.findIndex(item => String(item.id) === String(itemId));
                                 
                                 if (idx > -1) {
@@ -1243,45 +1437,51 @@
         // ==========================================
         // 11. 圖片匯出與 Modal 功能 (Export & Modal)
         // ==========================================
-        function formatShareHeader() {
+        function formatShareHeader(isTeams2 = false) {
+            const colLabel = isTeams2 ? "備註" : "備註";
             return `
                 <div class="share-row-item" style="border-bottom: 1px solid #334155; padding-bottom: 2px; margin-bottom: 4px; font-weight: 700; color: #94a3b8; font-size: 13px;">
                     <div class="share-col-level">等級</div>
                     <div class="share-col-job">職業</div>
                     <div class="share-col-name">名字</div>
-                    <div class="share-col-part">場次</div>
+                    <div class="share-col-part">${colLabel}</div>
                 </div>
             `;
         }
 
-        function formatShareLine(player) {
+        function formatShareLine(player, isTeams2 = false) {
             const level = getPlayerLevel(player);
             let nameStr = player.name || "";
             if (nameStr.length > 7) {
                 nameStr = nameStr.slice(0, 7);
             }
 
-            let partText = "";
-            if (player.part === "first") partText = "前7場";
-            else if (player.part === "second") partText = "後7場";
+            let lastColText = "";
+            if (isTeams2) {
+                lastColText = player.note || "";
+            } else {
+                if (player.part === "first") lastColText = "前7場";
+                else if (player.part === "second") lastColText = "後7場";
+            }
 
             return `
                 <div class="share-row-item">
                     <div class="share-col-level">${escapeHtml(level || "---")}</div>
                     <div class="share-col-job">${escapeHtml(player.job || "")}</div>
                     <div class="share-col-name">${escapeHtml(nameStr)}</div>
-                    <div class="share-col-part">${escapeHtml(partText)}</div>
+                    <div class="share-col-part">${escapeHtml(lastColText)}</div>
                 </div>
             `;
         }
 
-        async function generateAllTeamsImage() {
+        async function generateAllTeamsImage(isTeams2 = false) {
             if (typeof html2canvas === "undefined") return;
             const shareCard = document.getElementById("share-card");
             const wData = currentWeekData();
+            const groupsArr = isTeams2 ? wData.groups2 : wData.groups;
             let columnsHtml = "", count = 0;
 
-            wData.groups.forEach((group, gIdx) => {
+            groupsArr.forEach((group, gIdx) => {
                 const teams = group.teams || [];
                 if (!teams.some(t => (t.members || []).length > 0)) return;
 
@@ -1289,8 +1489,13 @@
                 teams.forEach((team) => {
                     if ((team.members || []).length > 0) {
                         colHtml += `<div class="share-team-wrapper"><div class="share-team-title-text">${team.emoji || "⚔️"} ${escapeHtml(team.name)} (${escapeHtml(team.time || "20:00")}) (${team.members.length}人)${team.con ? " (連14場)" : ""}</div>`;
-                        colHtml += formatShareHeader();
-                        team.members.forEach(p => colHtml += formatShareLine(p));
+                        colHtml += formatShareHeader(isTeams2);
+                        team.members.forEach((p, pIdx) => {
+                            if (isTeams2 && pIdx > 0 && pIdx % 6 === 0) {
+                                colHtml += `<div class="share-divider-line"></div>`;
+                            }
+                            colHtml += formatShareLine(p, isTeams2);
+                        });
                         colHtml += `</div>`;
                     }
                 });
@@ -1306,7 +1511,7 @@
             try {
                 await new Promise(r => requestAnimationFrame(r));
                 const canvas = await html2canvas(shareCard.firstElementChild, { scale: 2, useCORS: true, backgroundColor: "#111111", logging: false });
-                previewImages.push({ title: `本週全部隊伍 (${getWeekDisplayTitle(state.activeWeek)})`, dataUrl: canvas.toDataURL("image/png") });
+                previewImages.push({ title: `${isTeams2 ? '12人' : '6人'}全部隊伍 (${getWeekDisplayTitle(state.activeWeek)})`, dataUrl: canvas.toDataURL("image/png") });
             } catch(e) {}
             shareCard.innerHTML = "";
             if (previewImages.length > 0) { currentImageIndex = 0; showModal(); }
@@ -1364,42 +1569,80 @@
             const weekKeys = getAvailableWeekKeys();
             document.getElementById("week-select").innerHTML = weekKeys.map(wk => `<option value="${wk}" ${wk === state.activeWeek ? "selected" : ""}>${getWeekDisplayTitle(wk)}</option>`).join("");
             
-            const wData = currentWeekData(), curGroup = currentGroup(), teamsList = curGroup.teams || [];
+            const wData = currentWeekData();
+            
             let totalM = 0; 
-            teamsList.forEach(t => totalM += (t.members?.length || 0));
+            (wData.groups || []).forEach(g => (g.teams || []).forEach(t => totalM += (t.members?.length || 0)));
+
+            let totalM2 = 0; 
+            (wData.groups2 || []).forEach(g => (g.teams || []).forEach(t => totalM2 += (t.members?.length || 0)));
 
             document.getElementById("master-tab-badge").innerText = `${state.pool.length}人`;
             document.getElementById("teams-tab-badge").innerText = `${totalM}/18`;
-            document.getElementById("current-teams-count").innerText = teamsList.length;
+            document.getElementById("teams2-tab-badge").innerText = `${totalM2}/18`;
+
+            const curGroup6 = currentGroup(false);
+            const curGroup12 = currentGroup(true);
+
+            document.getElementById("current-teams-count").innerText = (curGroup6.teams || []).length;
+            const count2 = document.getElementById("current-teams-count-2");
+            if (count2) count2.innerText = (curGroup12.teams || []).length;
 
             const isMaster = currentTab === "master";
+            const isTeams = currentTab === "teams";
+            const isTeams2 = currentTab === "teams2";
+
             document.getElementById("tab-btn-master").className = `flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold transition-all duration-200 ${isMaster ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"}`;
-            document.getElementById("tab-btn-teams").className = `flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold transition-all duration-200 ${!isMaster ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"}`;
+            document.getElementById("tab-btn-teams").className = `flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold transition-all duration-200 ${isTeams ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"}`;
+            document.getElementById("tab-btn-teams2").className = `flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold transition-all duration-200 ${isTeams2 ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"}`;
             
             document.getElementById("tab-content-master").classList.toggle("hidden", !isMaster);
-            document.getElementById("tab-content-teams").classList.toggle("hidden", isMaster);
+            document.getElementById("tab-content-teams").classList.toggle("hidden", !isTeams);
+            document.getElementById("tab-content-teams2").classList.toggle("hidden", !isTeams2);
 
-            document.getElementById("group-tabs").innerHTML = wData.groups.map((g, idx) => {
+            const groupTabsHtml = wData.groups.map((g, idx) => {
                 const wd = getWeekday(g.date);
                 return `
                     <div class="flex flex-col items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-950 p-2.5">
-                        <button onclick="selectGroup(${idx})" class="rounded-md px-3.5 py-1.5 text-xs font-semibold transition ${idx === state.activeGroup ? "bg-blue-600 text-white" : "bg-slate-900 border border-slate-800 text-slate-300 hover:bg-slate-800"}">${GROUP_NAMES[idx]}</button>
+                        <button onclick="selectGroup(${idx}, false)" class="rounded-md px-3.5 py-1.5 text-xs font-semibold transition ${idx === state.activeGroup ? "bg-blue-600 text-white" : "bg-slate-900 border border-slate-800 text-slate-300 hover:bg-slate-800"}">${GROUP_NAMES[idx]}</button>
                         <div class="flex items-center gap-1">
-                            <input type="text" value="${escapeHtml(g.date || "")}" maxlength="5" onchange="updateGroupDate(${idx}, this.value)" class="w-24 rounded border border-slate-800 bg-slate-900 px-2 py-1 text-center text-xs text-slate-200">
+                            <input type="text" value="${escapeHtml(g.date || "")}" maxlength="5" onchange="updateGroupDate(${idx}, this.value, false)" class="w-24 rounded border border-slate-800 bg-slate-900 px-2 py-1 text-center text-xs text-slate-200">
                             ${wd ? `<span class="text-xs text-blue-400">(${wd})</span>` : ""}
                         </div>
                     </div>
                 `;
             }).join("");
 
-            document.getElementById("master-view-container").innerHTML = renderPool(true);
-            document.getElementById("teams-cards-container").innerHTML = renderTeamsContainer();
-            document.getElementById("teams-pool-container").innerHTML = renderPool(false);
+            const groupTabsHtml2 = wData.groups2.map((g, idx) => {
+                const wd = getWeekday(g.date);
+                return `
+                    <div class="flex flex-col items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-950 p-2.5">
+                        <button onclick="selectGroup(${idx}, true)" class="rounded-md px-3.5 py-1.5 text-xs font-semibold transition ${idx === state.activeGroup2 ? "bg-blue-600 text-white" : "bg-slate-900 border border-slate-800 text-slate-300 hover:bg-slate-800"}">${GROUP_NAMES[idx]}</button>
+                        <div class="flex items-center gap-1">
+                            <input type="text" value="${escapeHtml(g.date || "")}" maxlength="5" onchange="updateGroupDate(${idx}, this.value, true)" class="w-24 rounded border border-slate-800 bg-slate-900 px-2 py-1 text-center text-xs text-slate-200">
+                            ${wd ? `<span class="text-xs text-blue-400">(${wd})</span>` : ""}
+                        </div>
+                    </div>
+                `;
+            }).join("");
+
+            document.getElementById("group-tabs").innerHTML = groupTabsHtml;
+            const groupTabs2 = document.getElementById("group-tabs-2");
+            if (groupTabs2) groupTabs2.innerHTML = groupTabsHtml2;
+
+            document.getElementById("master-view-container").innerHTML = renderPool(true, false);
+            
+            document.getElementById("teams-cards-container").innerHTML = renderTeamsContainer(false);
+            document.getElementById("teams-pool-container").innerHTML = renderPool(false, false);
+
+            const cardsContainer2 = document.getElementById("teams-cards-container-2");
+            if (cardsContainer2) cardsContainer2.innerHTML = renderTeamsContainer(true);
+            const poolContainer2 = document.getElementById("teams-pool-container-2");
+            if (poolContainer2) poolContainer2.innerHTML = renderPool(false, true);
 
             initSortables();
         }
 
-        // 啟動應用程式
         initFirebaseListener();
     </script>
 </body>

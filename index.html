@@ -1279,21 +1279,31 @@
             const getIcon = f => poolSortState.field !== f ? '↕️' : (poolSortState.direction === 'asc' ? '▲' : '▼');
             const teams = currentGroup(isTeams2).teams || [];
 
-            let jobCheckboxesHtml = `
-                <div class="flex flex-wrap items-center gap-1.5 bg-slate-950 p-2 rounded-lg border border-slate-800 mb-2">
-                    <span class="text-xs text-slate-400 mr-1 font-semibold">職業篩選：</span>
-                    <button onclick="clearAllJobFilters()" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition mr-1">清除職業</button>
+            let filterBarHtml = `
+                <div class="flex flex-col gap-2 bg-slate-950 p-2.5 rounded-lg border border-slate-800 mb-3">
+                    <!-- 標題與標籤篩選按鈕列 -->
+                    <div class="flex flex-wrap items-center gap-1.5">
+                        <span class="text-xs text-slate-400 mr-1 font-semibold">標籤篩選：</span>
+                        <button onclick="setPoolTagFilter('all')" class="text-[11px] px-2.5 py-1 rounded transition border ${poolTagFilter === 'all' ? 'bg-blue-600 border-blue-500 text-white font-bold' : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'}">全部</button>
+                        <button onclick="setPoolTagFilter('treeKing')" class="text-[11px] px-2.5 py-1 rounded transition border ${poolTagFilter === 'treeKing' ? 'bg-emerald-600 border-emerald-500 text-white font-bold' : 'bg-slate-900 border-slate-800 text-emerald-400 hover:border-emerald-700'}">樹王</button>
+                        <button onclick="setPoolTagFilter('dragonKing')" class="text-[11px] px-2.5 py-1 rounded transition border ${poolTagFilter === 'dragonKing' ? 'bg-amber-600 border-amber-500 text-white font-bold' : 'bg-slate-900 border-slate-800 text-amber-400 hover:border-amber-700'}">龍王</button>
+                    </div>
+
+                    <!-- 職業篩選按鈕列 -->
+                    <div class="flex flex-wrap items-center gap-1.5 border-t border-slate-900 pt-2">
+                        <span class="text-xs text-slate-400 mr-1 font-semibold">職業篩選：</span>
+                        <button onclick="clearAllJobFilters()" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition mr-1">清除職業</button>
             `;
             JOB_LIST.forEach(j => {
                 const isChecked = poolJobFilters.includes(j);
-                jobCheckboxesHtml += `
-                    <label class="flex items-center gap-1 text-xs px-2 py-1 rounded cursor-pointer border transition ${isChecked ? 'bg-blue-600/30 border-blue-500 text-blue-200' : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'}">
+                filterBarHtml += `
+                    <label class="flex items-center gap-1 text-xs px-2 py-0.5 rounded cursor-pointer border transition ${isChecked ? 'bg-blue-600/30 border-blue-500 text-blue-200' : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'}">
                         <input type="checkbox" value="${j}" ${isChecked ? 'checked' : ''} onchange="toggleJobFilter('${j}')" class="hidden">
                         ${j}
                     </label>
                 `;
             });
-            jobCheckboxesHtml += `</div>`;
+            filterBarHtml += `</div></div>`;
 
             let html = `
                 <div class="rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-sm">
@@ -1305,7 +1315,7 @@
                             <button onclick="addEmptyPoolPlayer()" class="rounded border border-blue-600 bg-blue-600/20 px-2.5 py-1 text-xs text-blue-300">➕ 新增成員</button>
                         </div>
                     </div>
-                    ${jobCheckboxesHtml}
+                    ${filterBarHtml}
                     <div id="pool-list-${idSuffix}" data-list-type="pool" class="sortable-list flex flex-col gap-2 min-h-[80px]">
             `;
 

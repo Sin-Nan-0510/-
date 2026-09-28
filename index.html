@@ -252,7 +252,6 @@
         const WEEKDAYS = ["週二", "週三", "週四", "週五", "週六", "週日", "週一"];
         const WEEKDAY_NAMES = ["日", "一", "二", "三", "四", "五", "六"];
         
-        // 依照使用者指定的職業排序順序
         const JOB_LIST = ["黑騎士", "英雄", "聖騎士", "火毒", "冰雷", "主教", "箭神", "神射手", "夜使者", "暗影神偷", "槍神", "拳霸"];
 
         const JOB_STYLE_MAP = {
@@ -283,7 +282,7 @@
         let previewImages = [];
         let currentImageIndex = 0;
         let poolSortState = { field: null, direction: 'desc' };
-        let poolJobFilter = ""; // 職業篩選狀態
+        let poolJobFilters = []; // 改為陣列支援職業多選篩選
 
         let state = {
             activeWeek: formatDateKey(getTuesdayOfWeek()),
@@ -634,7 +633,6 @@
                         const levels = members.map(m => Number(getPlayerLevel(m)) || 0);
                         sortKey = dir === 1 ? Math.min(...levels) : Math.max(...levels);
                     } else if (field === 'job') {
-                        // 依照指定陣列 JOB_LIST 的索引來計算排序權重
                         const getJobIndex = (jobName) => {
                             const idx = JOB_LIST.indexOf(jobName);
                             return idx === -1 ? 999 : idx;
@@ -660,6 +658,21 @@
         // ==========================================
         // 8. 介面事件處理與動作 (UI Event Handlers)
         // ==========================================
+        function toggleJobFilter(job) {
+            const idx = poolJobFilters.indexOf(job);
+            if (idx > -1) {
+                poolJobFilters.splice(idx, 1);
+            } else {
+                poolJobFilters.push(job);
+            }
+            render();
+        }
+
+        function clearAllJobFilters() {
+            poolJobFilters = [];
+            render();
+        }
+
         function moveEntireTeamToTargetGroup(sTeamIdx, targetGroupIdx) {
             if (targetGroupIdx === "" || isNaN(targetGroupIdx)) return;
             const targetGIdx = parseInt(targetGroupIdx, 10);
@@ -1084,36 +1097,42 @@
                 ? state.pool 
                 : state.pool.filter(p => !hasReachedWeeklyLimit(p, wData));
 
-            // 套用職業篩選
-            if (poolJobFilter) {
-                displayPool = displayPool.filter(p => String(p.job || "").trim() === poolJobFilter);
+            // 套用職業多選篩選
+            if (poolJobFilters.length > 0) {
+                displayPool = displayPool.filter(p => poolJobFilters.includes(String(p.job || "").trim()));
             }
 
             const getIcon = f => poolSortState.field !== f ? '↕️' : (poolSortState.direction === 'asc' ? '▲' : '▼');
             const teams = currentGroup().teams || [];
 
-            // 產生職業篩選選項
-            let jobFilterOptions = `<option value="">全部職業</option>`;
+            // 產生職業勾選方塊介面
+            let jobCheckboxesHtml = `
+                <div class="flex flex-wrap items-center gap-1.5 bg-slate-950 p-2 rounded-lg border border-slate-800 mb-3">
+                    <span class="text-xs text-slate-400 mr-1 font-semibold">職業篩選：</span>
+                    <button onclick="clearAllJobFilters()" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition mr-1">全選/清除</button>
+            `;
             JOB_LIST.forEach(j => {
-                jobFilterOptions += `<option value="${j}" ${poolJobFilter === j ? "selected" : ""}>${j}</option>`;
+                const isChecked = poolJobFilters.includes(j);
+                jobCheckboxesHtml += `
+                    <label class="flex items-center gap-1 text-xs px-2 py-1 rounded cursor-pointer border transition ${isChecked ? 'bg-blue-600/30 border-blue-500 text-blue-200' : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'}">
+                        <input type="checkbox" value="${j}" ${isChecked ? 'checked' : ''} onchange="toggleJobFilter('${j}')" class="hidden">
+                        ${j}
+                    </label>
+                `;
             });
+            jobCheckboxesHtml += `</div>`;
 
             let html = `
                 <div class="rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-sm">
-                    <div class="mb-4 flex items-center justify-between border-b border-slate-800 pb-3 flex-wrap gap-3">
+                    <div class="mb-3 flex items-center justify-between border-b border-slate-800 pb-3 flex-wrap gap-3">
                         <h2 class="text-lg font-bold text-slate-200">👥 成員</h2>
                         <div class="flex items-center gap-2 flex-wrap">
-                            <div class="flex items-center gap-1 bg-slate-800/80 px-2 py-1 rounded border border-slate-700">
-                                <span class="text-xs text-slate-300">篩選職業：</span>
-                                <select onchange="poolJobFilter=this.value; render();" class="rounded border border-slate-600 bg-slate-900 px-2 py-0.5 text-xs text-blue-300 font-semibold focus:outline-none">
-                                    ${jobFilterOptions}
-                                </select>
-                            </div>
                             <button onclick="sortPoolBy('level')" class="rounded border border-slate-700 bg-slate-800 px-2 py-0.5 text-xs text-slate-200">等級 ${getIcon('level')}</button>
                             <button onclick="sortPoolBy('job')" class="rounded border border-slate-700 bg-slate-800 px-2 py-0.5 text-xs text-slate-200">職業 ${getIcon('job')}</button>
                             <button onclick="addEmptyPoolPlayer()" class="rounded border border-blue-600 bg-blue-600/20 px-2.5 py-1 text-xs text-blue-300">➕ 新增成員</button>
                         </div>
                     </div>
+                    ${jobCheckboxesHtml}
                     <div id="pool-list-${idSuffix}" data-list-type="pool" class="sortable-list flex flex-col gap-2 min-h-[80px]">
             `;
 

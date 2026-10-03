@@ -18,7 +18,7 @@
         }
         button, input, textarea, select { font-family: inherit; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-track { background: #1e293b; }下午 05:03 2026/10/3
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 999px; }
         ::-webkit-scrollbar-thumb:hover { background: #475569; }
         .drag-item { cursor: grab; }
@@ -165,7 +165,7 @@
                 <span>⚔️</span> 6人隊伍分配 <span id="teams-tab-badge" class="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-300">0/18</span>
             </button>
             <button id="tab-btn-teams2" onclick="switchTab('teams2')" class="flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold transition-all duration-200">
-                <span>⚔️</span> 12人隊伍分配 <span id="teams2-tab-badge" class="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-300">0/18</span>
+                <span>⚔️️</span> 12人隊伍分配 <span id="teams2-tab-badge" class="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-300">0/18</span>
             </button>
         </div>
 
@@ -1091,10 +1091,28 @@
             return html;
         }
 
-        function renderGroupSelectOptions(currentGroupId) {
-            let html = `<option value="" class="bg-slate-900 text-slate-500" ${!currentGroupId ? "selected" : ""}></option>`;
+        function renderGroupSelectOptions(currentGroupId, currentPlayerId) {
+            // 建立已使用大小號對應表 (groupId -> player name)
+            const usedGroupMap = new Map();
+            if (state.pool && Array.isArray(state.pool)) {
+                state.pool.forEach(p => {
+                    if (p.groupId && String(p.id) !== String(currentPlayerId)) {
+                        usedGroupMap.set(String(p.groupId).trim(), p.name || '未命名');
+                    }
+                });
+            }
+
+            let html = `<option value="" class="bg-slate-900 text-slate-500" ${!currentGroupId ? "selected" : ""}>選擇大小號</option>`;
             for (let i = 1; i <= 50; i++) {
-                html += `<option value="g${i}" class="bg-slate-900 text-amber-400 font-bold" ${currentGroupId === `g${i}` ? "selected" : ""}>大小號 ${i}</option>`;
+                const gKey = `g${i}`;
+                const isUsed = usedGroupMap.has(gKey);
+                const usedByName = isUsed ? usedGroupMap.get(gKey) : '';
+                
+                // 若已被使用，顯示「(已使用 - 名字)」並調整樣式或標籤
+                const label = isUsed ? `大小號 ${i} (已使用${usedByName ? ': ' + usedByName : ''})` : `大小號 ${i}`;
+                const optionClass = isUsed ? "bg-slate-900 text-slate-500 italic" : "bg-slate-900 text-amber-400 font-bold";
+                
+                html += `<option value="${gKey}" class="${optionClass}" ${currentGroupId === gKey ? "selected" : ""}>${label}</option>`;
             }
             return html;
         }
@@ -1163,7 +1181,7 @@
             `;
         }
 
-        // 12人分配專用的精簡成員卡片：完全對齊圖片範例版面 (#編號, Lv. 等級, 職業, 名字, 備註, 刪除按鈕)
+        // 12人分配專用的精簡成員卡片
         function memberCardTeams2(player, idx, tIdx) {
             return `
                 <div data-id="${escapeHtml(player.id)}" class="drag-item flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 transition shadow-sm">
@@ -1213,7 +1231,6 @@
                     }
                 });
 
-                // 12人模式套用 2 欄式 Grid 佈局（符合圖片左右並排配置），6人模式維持單欄
                 const gridClass = isTeams2 ? "grid grid-cols-1 md:grid-cols-2 gap-3" : "flex flex-col gap-3";
 
                 html += `
@@ -1285,8 +1302,8 @@
                     <div class="flex flex-wrap items-center gap-1.5">
                         <span class="text-xs text-slate-400 mr-1 font-semibold">標籤篩選：</span>
                         <button onclick="setPoolTagFilter('all')" class="text-[11px] px-2.5 py-1 rounded transition border ${poolTagFilter === 'all' ? 'bg-blue-600 border-blue-500 text-white font-bold' : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'}">全部</button>
-                        <button onclick="setPoolTagFilter('treeKing')" class="text-[11px] px-2.5 py-1 rounded transition border ${poolTagFilter === 'treeKing' ? 'bg-emerald-600 border-emerald-500 text-white font-bold' : 'bg-slate-900 border-slate-800 text-emerald-400 hover:border-emerald-700'}">樹王</button>
-                        <button onclick="setPoolTagFilter('dragonKing')" class="text-[11px] px-2.5 py-1 rounded transition border ${poolTagFilter === 'dragonKing' ? 'bg-amber-600 border-amber-500 text-white font-bold' : 'bg-slate-900 border-slate-800 text-amber-400 hover:border-amber-700'}">龍王</button>
+                        <button onclick="setPoolTagFilter('treeKing')" class="text-[11px] px-2.5 py-1 rounded transition border ${poolTagFilter === 'treeKing' ? 'bg-emerald-600 border-emerald-500 text-white font-bold' : 'bg-slate-900 border-slate-800 text-emerald-400 hover:border-slate-700'}">樹王</button>
+                        <button onclick="setPoolTagFilter('dragonKing')" class="text-[11px] px-2.5 py-1 rounded transition border ${poolTagFilter === 'dragonKing' ? 'bg-amber-600 border-amber-500 text-white font-bold' : 'bg-slate-900 border-slate-800 text-amber-400 hover:border-slate-700'}">龍王</button>
                     </div>
 
                     <!-- 職業篩選按鈕列 -->
@@ -1338,8 +1355,8 @@
                                 
                                 <input type="text" value="${escapeHtml(player.position)}" placeholder="AD/AP" onchange="updatePlayerField('${player.id}', 'position', this.value)" class="w-14 rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-300">
                                 
-                                <select onchange="updatePlayerField('${player.id}', 'groupId', this.value)" class="w-22 rounded border border-amber-900 bg-amber-950/40 px-1 py-0.5 text-xs text-amber-300">
-                                    ${renderGroupSelectOptions(player.groupId)}
+                                <select onchange="updatePlayerField('${player.id}', 'groupId', this.value)" class="w-32 rounded border border-amber-900 bg-amber-950/40 px-1 py-0.5 text-xs text-amber-300">
+                                    ${renderGroupSelectOptions(player.groupId, player.id)}
                                 </select>
 
                                 <div class="flex items-center gap-1 bg-slate-900/60 p-1 rounded border border-slate-800">${renderAvailabilitySelects(player)}</div>
@@ -1605,55 +1622,51 @@
             document.getElementById("tab-btn-master").className = `flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold transition-all duration-200 ${isMaster ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"}`;
             document.getElementById("tab-btn-teams").className = `flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold transition-all duration-200 ${isTeams ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"}`;
             document.getElementById("tab-btn-teams2").className = `flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold transition-all duration-200 ${isTeams2 ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"}`;
-            
+
             document.getElementById("tab-content-master").classList.toggle("hidden", !isMaster);
             document.getElementById("tab-content-teams").classList.toggle("hidden", !isTeams);
             document.getElementById("tab-content-teams2").classList.toggle("hidden", !isTeams2);
 
-            const groupTabsHtml = wData.groups.map((g, idx) => {
-                const wd = getWeekday(g.date);
-                return `
-                    <div class="flex flex-col items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-950 p-2.5">
-                        <button onclick="selectGroup(${idx}, false)" class="rounded-md px-3.5 py-1.5 text-xs font-semibold transition ${idx === state.activeGroup ? "bg-blue-600 text-white" : "bg-slate-900 border border-slate-800 text-slate-300 hover:bg-slate-800"}">${GROUP_NAMES[idx]}</button>
+            if (isMaster) {
+                document.getElementById("master-view-container").innerHTML = renderPool(true, false);
+            } else if (isTeams) {
+                document.getElementById("group-tabs").innerHTML = GROUP_NAMES.map((name, i) => {
+                    const g = wData.groups[i];
+                    const active = state.activeGroup === i;
+                    return `
                         <div class="flex items-center gap-1">
-                            <input type="text" value="${escapeHtml(g.date || "")}" maxlength="5" onchange="updateGroupDate(${idx}, this.value, false)" class="w-24 rounded border border-slate-800 bg-slate-900 px-2 py-1 text-center text-xs text-slate-200">
-                            ${wd ? `<span class="text-xs text-blue-400">(${wd})</span>` : ""}
+                            <button onclick="selectGroup(${i}, false)" class="rounded-lg px-4 py-2 text-xs font-bold transition ${active ? 'bg-blue-600 text-white shadow' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">
+                                ${name}
+                            </button>
+                            <input type="text" value="${escapeHtml(g.date || '')}" placeholder="日期" onchange="updateGroupDate(${i}, this.value, false)" class="w-14 rounded border border-slate-700 bg-slate-950 px-1 py-2 text-center text-xs text-slate-300">
                         </div>
-                    </div>
-                `;
-            }).join("");
-
-            const groupTabsHtml2 = wData.groups2.map((g, idx) => {
-                const wd = getWeekday(g.date);
-                return `
-                    <div class="flex flex-col items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-950 p-2.5">
-                        <button onclick="selectGroup(${idx}, true)" class="rounded-md px-3.5 py-1.5 text-xs font-semibold transition ${idx === state.activeGroup2 ? "bg-blue-600 text-white" : "bg-slate-900 border border-slate-800 text-slate-300 hover:bg-slate-800"}">${GROUP_NAMES[idx]}</button>
+                    `;
+                }).join("");
+                document.getElementById("teams-cards-container").innerHTML = renderTeamsContainer(false);
+                document.getElementById("teams-pool-container").innerHTML = renderPool(false, false);
+            } else if (isTeams2) {
+                document.getElementById("group-tabs-2").innerHTML = GROUP_NAMES.map((name, i) => {
+                    const g = wData.groups2[i];
+                    const active = state.activeGroup2 === i;
+                    return `
                         <div class="flex items-center gap-1">
-                            <input type="text" value="${escapeHtml(g.date || "")}" maxlength="5" onchange="updateGroupDate(${idx}, this.value, true)" class="w-24 rounded border border-slate-800 bg-slate-900 px-2 py-1 text-center text-xs text-slate-200">
-                            ${wd ? `<span class="text-xs text-blue-400">(${wd})</span>` : ""}
+                            <button onclick="selectGroup(${i}, true)" class="rounded-lg px-4 py-2 text-xs font-bold transition ${active ? 'bg-blue-600 text-white shadow' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">
+                                ${name}
+                            </button>
+                            <input type="text" value="${escapeHtml(g.date || '')}" placeholder="日期" onchange="updateGroupDate(${i}, this.value, true)" class="w-14 rounded border border-slate-700 bg-slate-950 px-1 py-2 text-center text-xs text-slate-300">
                         </div>
-                    </div>
-                `;
-            }).join("");
+                    `;
+                }).join("");
+                document.getElementById("teams-cards-container-2").innerHTML = renderTeamsContainer(true);
+                document.getElementById("teams-pool-container-2").innerHTML = renderPool(false, true);
+            }
 
-            document.getElementById("group-tabs").innerHTML = groupTabsHtml;
-            const groupTabs2 = document.getElementById("group-tabs-2");
-            if (groupTabs2) groupTabs2.innerHTML = groupTabsHtml2;
-
-            document.getElementById("master-view-container").innerHTML = renderPool(true, false);
-            
-            document.getElementById("teams-cards-container").innerHTML = renderTeamsContainer(false);
-            document.getElementById("teams-pool-container").innerHTML = renderPool(false, false);
-
-            const cardsContainer2 = document.getElementById("teams-cards-container-2");
-            if (cardsContainer2) cardsContainer2.innerHTML = renderTeamsContainer(true);
-            const poolContainer2 = document.getElementById("teams-pool-container-2");
-            if (poolContainer2) poolContainer2.innerHTML = renderPool(false, true);
-
-            initSortables();
+            setTimeout(initSortables, 50);
         }
 
-        initFirebaseListener();
+        window.addEventListener("DOMContentLoaded", () => {
+            initFirebaseListener();
+        });
     </script>
 </body>
 </html>

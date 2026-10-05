@@ -1524,6 +1524,7 @@
         }
 
         let imageGenSelectedIndices = [];
+        let imageGenerationToken = 0;
 
         function renderImageDayButtons() {
             const container = document.getElementById("image-day-buttons");
@@ -1542,7 +1543,8 @@
 
                 html += `
                     <button onclick="toggleImageDay(${gIdx})"
-                        class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${selected ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-700 bg-slate-800 text-slate-400 hover:bg-slate-700'} ${hasTeamWithMembers ? '' : 'opacity-60'}">
+                        ${hasTeamWithMembers ? '' : 'disabled'}
+                        class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${selected ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-700 bg-slate-800 text-slate-400 hover:bg-slate-700'} ${hasTeamWithMembers ? '' : 'opacity-60 cursor-not-allowed'}">
                         ${dayName}${dateStr}
                     </button>
                 `;
@@ -1580,6 +1582,7 @@
         }
 
         async function generateSelectedTeamsImage(showAlertOnEmpty = true) {
+            const generationToken = ++imageGenerationToken;
             const isTeams2 = pendingImageGenIsTeams2;
             const selectedIndices = [...imageGenSelectedIndices].sort((a, b) => a - b);
 
@@ -1624,20 +1627,32 @@
                 return false;
             }
 
-            previewImages = [];
             shareCard.innerHTML = `<div class="share-card-inner">${columnsHtml}</div>`;
             try {
                 await new Promise(r => requestAnimationFrame(r));
                 const canvas = await html2canvas(shareCard.firstElementChild, { scale: 2, useCORS: true, backgroundColor: "#111111", logging: false });
-                previewImages.push({ title: `${isTeams2 ? '12人' : '6人'}全部隊伍 (${getWeekDisplayTitle(state.activeWeek)})`, dataUrl: canvas.toDataURL("image/png") });
-            } catch(e) {}
-            shareCard.innerHTML = "";
-            if (previewImages.length > 0) {
-                currentImageIndex = 0;
-                renderImageDayButtons();
-                showModal();
+
+                // 如果使用者已經切換到新的日期選擇，忽略這次較晚完成的舊圖片。
+                if (generationToken !== imageGenerationToken) return false;
+
+                previewImages = [{ title: `${isTeams2 ? '12人' : '6人'}全部隊伍 (${getWeekDisplayTitle(state.activeWeek)})`, dataUrl: canvas.toDataURL("image/png") }];
+            } catch(e) {
+                if (generationToken === imageGenerationToken) {
+                    alert("圖片產生失敗，請稍後再試！");
+                }
+                return false;
+            } finally {
+                if (generationToken === imageGenerationToken) {
+                    shareCard.innerHTML = "";
+                }
             }
-            return previewImages.length > 0;
+
+            if (generationToken !== imageGenerationToken) return false;
+
+            currentImageIndex = 0;
+            renderImageDayButtons();
+            showModal();
+            return true;
         }
 
         function showModal() { 

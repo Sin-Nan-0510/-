@@ -39,7 +39,7 @@
             font-size: 34px;
             font-weight: 900;
             text-align: center;
-            padding: 18px 20px 12px;
+            padding: 4px 20px 8px;
             color: #f8fafc;
             letter-spacing: 2px;
         }
@@ -269,21 +269,8 @@
             </div>
             <div class="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-slate-800 bg-slate-950 p-3">
                 <span class="text-xs font-bold text-slate-300 mr-1">圖片標籤</span>
-                <div id="image-export-title" class="flex flex-wrap gap-2">
-                    <button type="button" data-image-title="" onclick="applyImageExportTitle('')"
-                        class="image-title-tag rounded-full border border-blue-600 bg-blue-600 px-3 py-1.5 text-xs font-bold text-white transition">
-                        不顯示
-                    </button>
-                    <button type="button" data-image-title="樹王團" onclick="applyImageExportTitle('樹王團')"
-                        class="image-title-tag rounded-full border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-blue-500 hover:text-white transition">
-                        樹王團
-                    </button>
-                    <button type="button" data-image-title="龍王團" onclick="applyImageExportTitle('龍王團')"
-                        class="image-title-tag rounded-full border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-blue-500 hover:text-white transition">
-                        龍王團
-                    </button>
-                </div>
-                <span class="text-xs text-slate-500">點一下立即套用，標題會置中顯示在圖片最上方</span>
+                <div id="image-export-title" class="flex flex-wrap gap-2"></div>
+                <span class="text-xs text-slate-500">點一下立即更新圖片，標題會置中顯示在圖片最上方</span>
             </div>
             <div class="relative flex flex-1 items-center justify-center overflow-auto rounded-lg bg-slate-950 p-2">
                 <img id="modal-img" class="max-h-[65vh] rounded object-contain shadow-lg" src="" alt="團隊圖片預覽">
@@ -343,6 +330,19 @@
 
         const DEFAULT_JOB_CLASS = "bg-slate-900 border-slate-800 text-slate-400";
         const DEFAULT_JOB_STYLE = "background-color: #0f172a; color: #94a3b8;";
+
+        // ==========================================
+        // 共用標籤設定
+        // 之後新增標籤，只要在這裡增加一筆即可。
+        // key：玩家資料使用的欄位
+        // filterLabel：總名單／成員名單的篩選文字
+        // imageLabel：圖片標題按鈕文字
+        // activeClass：標籤被選取時的顏色
+        // ==========================================
+        const SHARED_TAGS = [
+            { key: "treeKing", filterLabel: "樹王", imageLabel: "樹王團", activeClass: "bg-emerald-600 border-emerald-500 text-white", playerClass: "bg-emerald-950 border-emerald-600 text-emerald-300" },
+            { key: "dragonKing", filterLabel: "龍王", imageLabel: "龍王團", activeClass: "bg-amber-600 border-amber-500 text-white", playerClass: "bg-amber-950 border-amber-500 text-amber-300" }
+        ];
 
         // ==========================================
         // 2. 全域狀態變數 (Global State)
@@ -525,6 +525,7 @@
                 part: String(player.part || ""),
                 treeKing: Boolean(player.treeKing), 
                 dragonKing: Boolean(player.dragonKing), 
+                ...Object.fromEntries(SHARED_TAGS.map(tag => [tag.key, Boolean(player[tag.key])])),
                 availability: normalizePlayerAvailability(player.availability, wk),
                 note: String(player.note || player["備註"] || "").trim()
             };
@@ -1264,12 +1265,11 @@
                         </select>
 
                         <div class="flex items-center gap-1.5">
-                            <label class="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded border cursor-pointer ${player.treeKing ? 'bg-emerald-950 border-emerald-600 text-emerald-300 font-bold' : 'bg-slate-900 border-slate-800 text-slate-500'}">
-                                <input type="checkbox" ${player.treeKing ? "checked" : ""} onchange="updatePlayerTag('${player.id}', 'treeKing', this.checked)"> 樹王
-                            </label>
-                            <label class="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded border cursor-pointer ${player.dragonKing ? 'bg-amber-950 border-amber-500 text-amber-300 font-bold' : 'bg-slate-900 border-slate-800 text-slate-500'}">
-                                <input type="checkbox" ${player.dragonKing ? "checked" : ""} onchange="updatePlayerTag('${player.id}', 'dragonKing', this.checked)"> 龍王
-                            </label>
+                            ${SHARED_TAGS.map(tag => `
+                                <label class="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded border cursor-pointer ${player[tag.key] ? tag.playerClass + ' font-bold' : 'bg-slate-900 border-slate-800 text-slate-500'}">
+                                    <input type="checkbox" ${player[tag.key] ? "checked" : ""} onchange="updatePlayerTag('${player.id}', '${tag.key}', this.checked)"> ${escapeHtml(tag.filterLabel)}
+                                </label>
+                            `).join('')}
                         </div>
 
                         <input type="text" value="${escapeHtml(player.note || '')}" placeholder="備註" onchange="updatePlayerField('${player.id}', 'note', this.value)" class="w-35 rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-400">
@@ -1397,12 +1397,11 @@
                 displayPool = displayPool.filter(p => poolJobFilters.includes(String(p.job || "").trim()));
             }
 
-            if (poolTagFilter === "treeKing") {
-                displayPool = displayPool.filter(p => p.treeKing);
-            } else if (poolTagFilter === "dragonKing") {
-                displayPool = displayPool.filter(p => p.dragonKing);
-            } else if (poolTagFilter === "both") {
-                displayPool = displayPool.filter(p => p.treeKing || p.dragonKing);
+            if (poolTagFilter !== "all") {
+                const selectedTag = SHARED_TAGS.find(tag => tag.key === poolTagFilter);
+                if (selectedTag) {
+                    displayPool = displayPool.filter(p => Boolean(p[selectedTag.key]));
+                }
             }
 
             // 只有 6人／12人隊伍頁面的成員名單套用日期篩選；總名單維持原本顯示方式。
@@ -1421,8 +1420,9 @@
                     <div class="flex flex-wrap items-center gap-1.5">
                         <span class="text-xs text-slate-400 mr-1 font-semibold">標籤篩選：</span>
                         <button onclick="setPoolTagFilter('all')" class="text-[11px] px-2.5 py-1 rounded transition border ${poolTagFilter === 'all' ? 'bg-blue-600 border-blue-500 text-white font-bold' : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'}">全部</button>
-                        <button onclick="setPoolTagFilter('treeKing')" class="text-[11px] px-2.5 py-1 rounded transition border ${poolTagFilter === 'treeKing' ? 'bg-emerald-600 border-emerald-500 text-white font-bold' : 'bg-slate-900 border-slate-800 text-emerald-400 hover:border-slate-700'}">樹王</button>
-                        <button onclick="setPoolTagFilter('dragonKing')" class="text-[11px] px-2.5 py-1 rounded transition border ${poolTagFilter === 'dragonKing' ? 'bg-amber-600 border-amber-500 text-white font-bold' : 'bg-slate-900 border-slate-800 text-amber-400 hover:border-slate-700'}">龍王</button>
+                        ${SHARED_TAGS.map(tag => `
+                            <button onclick="setPoolTagFilter('${tag.key}')" class="text-[11px] px-2.5 py-1 rounded transition border ${poolTagFilter === tag.key ? tag.activeClass : `bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700`}">${escapeHtml(tag.filterLabel)}</button>
+                        `).join('')}
                     </div>
 
                     ${!isMasterView ? `
@@ -1495,12 +1495,11 @@
                                 </select>
 
                                 <div class="flex items-center gap-1.5">
-                                    <label class="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded border cursor-pointer ${player.treeKing ? 'bg-emerald-950 border-emerald-600 text-emerald-300 font-bold' : 'bg-slate-900 border-slate-800 text-slate-500'}">
-                                        <input type="checkbox" ${player.treeKing ? "checked" : ""} onchange="updatePlayerTag('${player.id}', 'treeKing', this.checked)"> 樹王
-                                    </label>
-                                    <label class="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded border cursor-pointer ${player.dragonKing ? 'bg-amber-950 border-amber-500 text-amber-300 font-bold' : 'bg-slate-900 border-slate-800 text-slate-500'}">
-                                        <input type="checkbox" ${player.dragonKing ? "checked" : ""} onchange="updatePlayerTag('${player.id}', 'dragonKing', this.checked)"> 龍王
-                                    </label>
+                                    ${SHARED_TAGS.map(tag => `
+                                        <label class="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded border cursor-pointer ${player[tag.key] ? tag.playerClass + ' font-bold' : 'bg-slate-900 border-slate-800 text-slate-500'}">
+                                            <input type="checkbox" ${player[tag.key] ? "checked" : ""} onchange="updatePlayerTag('${player.id}', '${tag.key}', this.checked)"> ${escapeHtml(tag.filterLabel)}
+                                        </label>
+                                    `).join('')}
                                 </div>
 
                                 <input type="text" value="${escapeHtml(player.note || '')}" placeholder="備註" onchange="updatePlayerField('${player.id}', 'note', this.value)" class="w-35 rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-400">
@@ -1785,12 +1784,23 @@
         }
 
         function updateImageTitleTags() {
-            document.querySelectorAll('.image-title-tag').forEach((button) => {
-                const selected = String(button.dataset.imageTitle || "") === String(imageExportTitle || "");
-                button.className = selected
-                    ? 'image-title-tag rounded-full border border-blue-600 bg-blue-600 px-3 py-1.5 text-xs font-bold text-white transition'
-                    : 'image-title-tag rounded-full border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-blue-500 hover:text-white transition';
-            });
+            const container = document.getElementById('image-export-title');
+            if (!container) return;
+
+            const tags = [
+                { label: '不顯示', value: '' },
+                ...SHARED_TAGS.map(tag => ({ label: tag.imageLabel, value: tag.imageLabel }))
+            ];
+
+            container.innerHTML = tags.map(tag => {
+                const selected = String(tag.value) === String(imageExportTitle || '');
+                return `
+                    <button type="button" data-image-title="${escapeHtml(tag.value)}" onclick="applyImageExportTitle('${String(tag.value).replaceAll("'", "\\'")}')"
+                        class="image-title-tag rounded-full border px-3 py-1.5 text-xs font-bold transition ${selected ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-700 bg-slate-800 text-slate-300 hover:border-blue-500 hover:text-white'}">
+                        ${escapeHtml(tag.label)}
+                    </button>
+                `;
+            }).join('');
         }
 
         function closeModal() { 

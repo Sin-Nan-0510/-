@@ -35,6 +35,15 @@
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
         }
         
+        .share-export-title {
+            font-size: 34px;
+            font-weight: 900;
+            text-align: center;
+            padding: 18px 20px 12px;
+            color: #f8fafc;
+            letter-spacing: 2px;
+        }
+
         #share-card {
             position: fixed;
             left: -100000px;
@@ -44,12 +53,20 @@
         }
         .share-card-inner {
             display: flex;
-            flex-direction: row;
+            flex-direction: column;
+            align-items: stretch;
             gap: 20px;
             padding: 28px;
             background: #111111;
             color: #d1d5db;
             font-family: "Microsoft JhengHei", sans-serif;
+        }
+        /* 匯出圖片的團隊欄位橫向排列；標題獨立放在最上方置中。 */
+        .share-export-columns {
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            gap: 20px;
         }
         .share-group-column {
             width: 330px;
@@ -250,6 +267,24 @@
                 <h3 id="modal-title" class="text-lg font-bold text-slate-100">團隊圖片預覽</h3>
                 <button onclick="closeModal()" class="rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-white">✕</button>
             </div>
+            <div class="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-slate-800 bg-slate-950 p-3">
+                <span class="text-xs font-bold text-slate-300 mr-1">圖片標籤</span>
+                <div id="image-export-title" class="flex flex-wrap gap-2">
+                    <button type="button" data-image-title="" onclick="applyImageExportTitle('')"
+                        class="image-title-tag rounded-full border border-blue-600 bg-blue-600 px-3 py-1.5 text-xs font-bold text-white transition">
+                        不顯示
+                    </button>
+                    <button type="button" data-image-title="樹王團" onclick="applyImageExportTitle('樹王團')"
+                        class="image-title-tag rounded-full border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-blue-500 hover:text-white transition">
+                        樹王團
+                    </button>
+                    <button type="button" data-image-title="龍王團" onclick="applyImageExportTitle('龍王團')"
+                        class="image-title-tag rounded-full border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-blue-500 hover:text-white transition">
+                        龍王團
+                    </button>
+                </div>
+                <span class="text-xs text-slate-500">點一下立即套用，標題會置中顯示在圖片最上方</span>
+            </div>
             <div class="relative flex flex-1 items-center justify-center overflow-auto rounded-lg bg-slate-950 p-2">
                 <img id="modal-img" class="max-h-[65vh] rounded object-contain shadow-lg" src="" alt="團隊圖片預覽">
             </div>
@@ -422,21 +457,23 @@
         // ==========================================
         // 4. 預設資料結構產生器 (Default Generators)
         // ==========================================
-        function createDefaultTeams() {
+        function createDefaultTeams(isTeams2 = false) {
+            // 6人隊伍預設「連14場」；12人隊伍預設「連7場」。
+            const defaultCon = !isTeams2;
             return [
-                { name: "第1隊", emoji: "⚔️", time: "20:00", con: false, members: [] },
-                { name: "第2隊", emoji: "⚔️", time: "20:00", con: false, members: [] },
-                { name: "第3隊", emoji: "⚔️", time: "20:00", con: false, members: [] }
+                { name: "第1隊", emoji: "⚔️", time: "20:00", con: defaultCon, members: [] },
+                { name: "第2隊", emoji: "⚔️", time: "20:00", con: defaultCon, members: [] },
+                { name: "第3隊", emoji: "⚔️", time: "20:00", con: defaultCon, members: [] }
             ];
         }
 
-        function createDefaultWeekGroups(weekKey) {
+        function createDefaultWeekGroups(weekKey, isTeams2 = false) {
             const [y, m, d] = (weekKey || formatDateKey(getTuesdayOfWeek())).split('-').map(Number);
             const startDate = y ? new Date(y, m - 1, d) : getTuesdayOfWeek();
             return Array.from({ length: MAX_GROUPS }, (_, i) => {
                 const targetDate = new Date(startDate);
                 targetDate.setDate(startDate.getDate() + i);
-                return { teams: createDefaultTeams(), date: `${targetDate.getMonth() + 1}/${targetDate.getDate()}` };
+                return { teams: createDefaultTeams(isTeams2), date: `${targetDate.getMonth() + 1}/${targetDate.getDate()}` };
             });
         }
 
@@ -445,7 +482,7 @@
             return { 
                 activeWeek: defaultWeekKey, 
                 pool: [], 
-                weeksData: { [defaultWeekKey]: { groups: createDefaultWeekGroups(defaultWeekKey), groups2: createDefaultWeekGroups(defaultWeekKey) } } 
+                weeksData: { [defaultWeekKey]: { groups: createDefaultWeekGroups(defaultWeekKey, false), groups2: createDefaultWeekGroups(defaultWeekKey, true) } } 
             };
         }
 
@@ -493,9 +530,9 @@
             };
         }
 
-        function normalizeGroupsData(rawGroups, wk) {
+        function normalizeGroupsData(rawGroups, wk, isTeams2 = false) {
             let groups = Array.isArray(rawGroups) ? rawGroups.slice(0, MAX_GROUPS) : [];
-            const defGroups = createDefaultWeekGroups(wk);
+            const defGroups = createDefaultWeekGroups(wk, isTeams2);
             
             while (groups.length < MAX_GROUPS) {
                 groups.push(defGroups[groups.length]);
@@ -508,7 +545,7 @@
                     time: t.time || "20:00",
                     con: Boolean(t.con),
                     members: Array.isArray(t.members) ? t.members.map(p => normalizePlayer(p, wk)).filter(Boolean) : []
-                })) : createDefaultTeams();
+                })) : createDefaultTeams(isTeams2);
                 
                 return { teams, date: typeof g?.date === "string" && g.date ? g.date : defGroups[idx].date };
             });
@@ -516,8 +553,8 @@
 
         function normalizeWeekGroupData(weekData, wk) {
             return {
-                groups: normalizeGroupsData(weekData?.groups, wk),
-                groups2: normalizeGroupsData(weekData?.groups2 || weekData?.groups, wk)
+                groups: normalizeGroupsData(weekData?.groups, wk, false),
+                groups2: normalizeGroupsData(weekData?.groups2 || weekData?.groups, wk, true)
             };
         }
 
@@ -534,7 +571,7 @@
                 }
             }
             if (!weeksData[activeWeek]) {
-                weeksData[activeWeek] = { groups: createDefaultWeekGroups(activeWeek), groups2: createDefaultWeekGroups(activeWeek) };
+                weeksData[activeWeek] = { groups: createDefaultWeekGroups(activeWeek, false), groups2: createDefaultWeekGroups(activeWeek, true) };
             }
             
             const pool = Array.isArray(data.pool) ? data.pool.map(p => normalizePlayer(p, activeWeek)).filter(Boolean) : [];
@@ -554,7 +591,7 @@
         }
 
         function currentWeekData() { 
-            return state.weeksData[state.activeWeek] || { groups: createDefaultWeekGroups(state.activeWeek), groups2: createDefaultWeekGroups(state.activeWeek) }; 
+            return state.weeksData[state.activeWeek] || { groups: createDefaultWeekGroups(state.activeWeek, false), groups2: createDefaultWeekGroups(state.activeWeek, true) }; 
         }
         
         function currentGroup(isTeams2 = false) { 
@@ -845,7 +882,7 @@
             if (!wk) return;
             transactionUpdate(data => {
                 data.activeWeek = wk;
-                if (!data.weeksData[wk]) data.weeksData[wk] = { groups: createDefaultWeekGroups(wk), groups2: createDefaultWeekGroups(wk) };
+                if (!data.weeksData[wk]) data.weeksData[wk] = { groups: createDefaultWeekGroups(wk, false), groups2: createDefaultWeekGroups(wk, true) };
                 return true;
             });
         }
@@ -867,7 +904,7 @@
             transactionUpdate(data => {
                 delete data.weeksData[wk];
                 data.activeWeek = formatDateKey(getTuesdayOfWeek());
-                if (!data.weeksData[data.activeWeek]) data.weeksData[data.activeWeek] = { groups: createDefaultWeekGroups(data.activeWeek), groups2: createDefaultWeekGroups(data.activeWeek) };
+                if (!data.weeksData[data.activeWeek]) data.weeksData[data.activeWeek] = { groups: createDefaultWeekGroups(data.activeWeek, false), groups2: createDefaultWeekGroups(data.activeWeek, true) };
                 return true;
             });
         }
@@ -884,7 +921,7 @@
                 const wData = data.weeksData[state.activeWeek];
                 const groupsArr = isTeams2 ? wData.groups2 : wData.groups;
                 const g = groupsArr[isTeams2 ? state.activeGroup2 : state.activeGroup];
-                g.teams.push({ name: `第${g.teams.length + 1}隊`, emoji: "⚔️", time: "20:00", con: false, members: [] });
+                g.teams.push({ name: `第${g.teams.length + 1}隊`, emoji: "⚔️", time: "20:00", con: !isTeams2, members: [] });
                 return true;
             });
         }
@@ -1300,10 +1337,14 @@
                                 <span class="text-lg">⚔️</span>
                                 <input type="text" value="${escapeHtml(team.name)}" onchange="updateTeamName(${tIdx}, this.value, ${isTeams2})" class="w-24 rounded border border-slate-700 bg-slate-950 px-2 py-1 text-base font-bold text-blue-300">
                                 <input type="text" value="${escapeHtml(team.time || "20:00")}" maxlength="5" onchange="updateTeamTime(${tIdx}, this.value, ${isTeams2})" class="w-16 rounded border border-slate-800 bg-slate-900 px-1 py-0.5 text-center text-xs text-blue-400 font-bold">
-                                ${!isTeams2 ? `
-                                <label class="flex items-center gap-1 text-xs text-amber-300 bg-amber-950/60 border border-amber-900 px-2.5 py-1 rounded-lg cursor-pointer">
-                                    <input type="checkbox" ${team.con ? "checked" : ""} onchange="updateTeamCon(${tIdx}, this.checked, false)"> 連14場
-                                </label>` : ''}
+                                <div class="flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-950/70 p-1">
+                                    <label class="flex items-center gap-1 px-2 py-1 rounded-md cursor-pointer text-xs ${!team.con ? 'bg-blue-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800'}">
+                                        <input type="radio" name="team-rounds-${isTeams2 ? '2_' : ''}${tIdx}" ${!team.con ? "checked" : ""} onchange="updateTeamCon(${tIdx}, false, ${isTeams2})"> 連7場
+                                    </label>
+                                    <label class="flex items-center gap-1 px-2 py-1 rounded-md cursor-pointer text-xs ${team.con ? 'bg-amber-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800'}">
+                                        <input type="radio" name="team-rounds-${isTeams2 ? '2_' : ''}${tIdx}" ${team.con ? "checked" : ""} onchange="updateTeamCon(${tIdx}, true, ${isTeams2})"> 連14場
+                                    </label>
+                                </div>
                             </div>
 
                             <div class="flex items-center gap-2 flex-wrap">
@@ -1593,6 +1634,8 @@
 
         let imageGenSelectedIndices = [];
         let imageGenerationToken = 0;
+        // 圖片內標題：可在預覽視窗自行輸入，例如「樹王團」或「龍王團」。
+        let imageExportTitle = "";
 
         function renderImageDayButtons() {
             const container = document.getElementById("image-day-buttons");
@@ -1664,6 +1707,10 @@
             const wData = currentWeekData();
             const groupsArr = isTeams2 ? wData.groups2 : wData.groups;
             let columnsHtml = "", count = 0;
+            const exportTitle = String(imageExportTitle || "").trim();
+            const titleHtml = exportTitle
+                ? `<div class="share-export-title">${escapeHtml(exportTitle)}</div>`
+                : "";
 
             selectedIndices.forEach((gIdx) => {
                 const group = groupsArr[gIdx];
@@ -1695,7 +1742,7 @@
                 return false;
             }
 
-            shareCard.innerHTML = `<div class="share-card-inner">${columnsHtml}</div>`;
+            shareCard.innerHTML = `<div class="share-card-inner">${titleHtml}<div class="share-export-columns">${columnsHtml}</div></div>`;
             try {
                 await new Promise(r => requestAnimationFrame(r));
                 const canvas = await html2canvas(shareCard.firstElementChild, { scale: 2, useCORS: true, backgroundColor: "#111111", logging: false });
@@ -1703,7 +1750,7 @@
                 // 如果使用者已經切換到新的日期選擇，忽略這次較晚完成的舊圖片。
                 if (generationToken !== imageGenerationToken) return false;
 
-                previewImages = [{ title: `${isTeams2 ? '12人' : '6人'}全部隊伍 (${getWeekDisplayTitle(state.activeWeek)})`, dataUrl: canvas.toDataURL("image/png") }];
+                previewImages = [{ title: `${exportTitle ? exportTitle + " - " : ""}${isTeams2 ? '12人' : '6人'}全部隊伍 (${getWeekDisplayTitle(state.activeWeek)})`, dataUrl: canvas.toDataURL("image/png") }];
             } catch(e) {
                 if (generationToken === imageGenerationToken) {
                     alert("圖片產生失敗，請稍後再試！");
@@ -1723,9 +1770,27 @@
             return true;
         }
 
-        function showModal() { 
-            updateModalContent(); 
-            document.getElementById("image-modal").classList.remove("hidden"); 
+        function showModal() {
+            updateModalContent();
+            updateImageTitleTags();
+            document.getElementById("image-modal").classList.remove("hidden");
+        }
+
+        // 圖片標籤採用「篩選標籤」樣式，點擊後立即重新產生圖片。
+        // 新增標籤時，只要在 Modal 的 image-title-tag 區塊新增一個 button 即可。
+        async function applyImageExportTitle(title) {
+            imageExportTitle = String(title || "").trim();
+            updateImageTitleTags();
+            await generateSelectedTeamsImage(false);
+        }
+
+        function updateImageTitleTags() {
+            document.querySelectorAll('.image-title-tag').forEach((button) => {
+                const selected = String(button.dataset.imageTitle || "") === String(imageExportTitle || "");
+                button.className = selected
+                    ? 'image-title-tag rounded-full border border-blue-600 bg-blue-600 px-3 py-1.5 text-xs font-bold text-white transition'
+                    : 'image-title-tag rounded-full border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-blue-500 hover:text-white transition';
+            });
         }
 
         function closeModal() { 

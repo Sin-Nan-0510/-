@@ -269,7 +269,8 @@
 
     <script>
         // ==========================================
-        // 1. 常數與設定值 (Constants & Config)
+        // 1. 常數與設定值
+        // 這裡集中放 Firebase、週別、職業等固定設定。
         // ==========================================
         const FIREBASE_CONFIG = {
             apiKey: "AIzaSyCbD0DlTCKkDzjkyADmovtjSe6j6blClZI",
@@ -449,7 +450,8 @@
         }
 
         // ==========================================
-        // 5. 資料規格化邏輯 (Normalization)
+        // 5. 資料規格化邏輯
+        // Firebase / 舊資料載入時，統一整理成目前程式使用的格式。
         // ==========================================
         function normalizeAvailabilityArray(arr) {
             const def = ["", "", "", "", "", "", ""];
@@ -561,7 +563,8 @@
         }
 
         // ==========================================
-        // 6. 資料庫與狀態同步 (Database Sync)
+        // 6. 資料庫與狀態同步
+        // Firebase 開啟時同步雲端；失敗時退回 localStorage。
         // ==========================================
         function saveLocalState() {
             try { 
@@ -634,7 +637,8 @@
         }
 
         // ==========================================
-        // 7. 商業邏輯運算 (Business Logic)
+        // 7. 商業邏輯運算
+        // 隊伍限制、玩家是否已安排等「規則」集中在這裡。
         // ==========================================
         function getPlayerWeeklyTeamCount(playerId, weekData) {
             if (!weekData) return 0;
@@ -652,6 +656,24 @@
             checkGroups(weekData.groups);
             checkGroups(weekData.groups2);
             return count;
+        }
+
+        // ----------------------------------------------------------
+        // 取得玩家在「12人隊伍」中的排隊狀態
+        // 規則：只要玩家已經被排進本週任何一個 12 人隊伍，
+        // 就不再顯示於 12 人頁面的「待排名單」。
+        // 移出 12 人隊伍後，玩家會自動重新出現在名單。
+        // ----------------------------------------------------------
+        function isPlayerAssignedTo12Team(playerId, weekData) {
+            if (!weekData?.groups2) return false;
+
+            return weekData.groups2.some(group =>
+                (group.teams || []).some(team =>
+                    (team.members || []).some(member =>
+                        String(member.id) === String(playerId)
+                    )
+                )
+            );
         }
 
         function hasReachedWeeklyLimit(player, weekData) {
@@ -712,7 +734,8 @@
         }
 
         // ==========================================
-        // 8. 介面事件處理與動作 (UI Event Handlers)
+        // 8. 介面事件處理與動作
+        // 按鈕、拖曳、玩家資料修改等操作都在這裡。
         // ==========================================
         function toggleJobFilter(job) {
             const idx = poolJobFilters.indexOf(job);
@@ -1066,9 +1089,15 @@
                 const groupsArr = isTeams2 ? wData.groups2 : wData.groups;
                 const targetTeam = groupsArr[isTeams2 ? state.activeGroup2 : state.activeGroup].teams[tIdx];
                 
-                if (hasReachedWeeklyLimit(p, wData)) { 
-                    alert("此玩家本週已達出賽上限！"); 
-                    return false; 
+                // 12 人隊伍：同一玩家本週只能存在於 12 人隊伍中的一個安排。
+                if (isTeams2 && isPlayerAssignedTo12Team(id, wData)) {
+                    alert("此玩家已排入本週 12 人隊伍，請先從原隊伍移除後再重新安排！");
+                    return false;
+                }
+
+                if (hasReachedWeeklyLimit(p, wData)) {
+                    alert("此玩家本週已達出賽上限！");
+                    return false;
                 }
                 if (targetTeam.members.some(m => String(m.id) === String(id))) return false;
                 
@@ -1107,7 +1136,8 @@
         }
 
         // ==========================================
-        // 9. 視圖渲染與 HTML 生成 (DOM Rendering)
+        // 9. 視圖渲染與 HTML 生成
+        // 所有畫面上的 HTML 都由這一區依目前狀態重新產生。
         // ==========================================
         function getJobColorClass(job) {
             return JOB_STYLE_MAP[job]?.class || DEFAULT_JOB_CLASS;
@@ -1307,9 +1337,20 @@
             const idSuffix = isMasterView ? "master" : (isTeams2 ? "teams2" : "teams");
             const wData = currentWeekData();
             
-            let displayPool = isMasterView 
-                ? state.pool 
+            // ------------------------------------------------------
+            // 待排名單顯示規則
+            // 6人頁：依原本的「本週出賽上限」過濾。
+            // 12人頁：除了原本的上限外，只要已排進 12 人隊伍，
+            // 就直接從待排名單隱藏，避免同一玩家重複安排。
+            // 總名單頁：維持顯示全部玩家。
+            // ------------------------------------------------------
+            let displayPool = isMasterView
+                ? state.pool
                 : state.pool.filter(p => !hasReachedWeeklyLimit(p, wData));
+
+            if (isTeams2 && !isMasterView) {
+                displayPool = displayPool.filter(p => !isPlayerAssignedTo12Team(p.id, wData));
+            }
 
             if (poolJobFilters.length > 0) {
                 displayPool = displayPool.filter(p => poolJobFilters.includes(String(p.job || "").trim()));
@@ -1436,7 +1477,8 @@
         }
 
         // ==========================================
-        // 10. 拖曳元件初始化 (Sortable.js)
+        // 10. 拖曳元件初始化
+        // Sortable.js 負責總名單 ↔ 隊伍之間的拖曳。
         // ==========================================
         function initSortables() {
             sortableInstances.forEach(i => i.destroy());
@@ -1510,7 +1552,8 @@
         }
 
         // ==========================================
-        // 11. 圖片匯出與 Modal 功能 (Export & Modal)
+        // 11. 圖片匯出與 Modal 功能
+        // 產生隊伍圖片、預覽、複製與下載。
         // ==========================================
         function formatShareHeader(isTeams2 = false) {
             return `
@@ -1716,7 +1759,8 @@
         }
 
         // ==========================================
-        // 12. 主渲染進入點 (Main Render Routine)
+        // 12. 主渲染進入點
+        // 根據目前分頁、週別與隊伍資料更新整個畫面。
         // ==========================================
         function render() {
             const weekKeys = getAvailableWeekKeys();

@@ -320,6 +320,8 @@
         let poolSortState = { field: null, direction: 'desc' };
         let poolJobFilters = [];
         let poolTagFilter = "all";
+        // 6人／12人隊伍頁面的成員名單日期篩選：-1=全部，0~6=週二~週一
+        let poolDayFilter = -1;
         let pendingImageGenIsTeams2 = false;
 
         let state = {
@@ -729,6 +731,11 @@
 
         function setPoolTagFilter(val) {
             poolTagFilter = val;
+            render();
+        }
+
+        function setPoolDayFilter(dayIdx) {
+            poolDayFilter = Number(dayIdx);
             render();
         }
 
@@ -1316,6 +1323,14 @@
                 displayPool = displayPool.filter(p => p.treeKing || p.dragonKing);
             }
 
+            // 只有 6人／12人隊伍頁面的成員名單套用日期篩選；總名單維持原本顯示方式。
+            if (!isMasterView && poolDayFilter >= 0 && poolDayFilter <= 6) {
+                displayPool = displayPool.filter(p => {
+                    const availability = getPlayerWeekAvailability(p, state.activeWeek);
+                    return String(availability[poolDayFilter] || "").trim() !== "";
+                });
+            }
+
             const getIcon = f => poolSortState.field !== f ? '↕️' : (poolSortState.direction === 'asc' ? '▲' : '▼');
             const teams = currentGroup(isTeams2).teams || [];
 
@@ -1327,6 +1342,16 @@
                         <button onclick="setPoolTagFilter('treeKing')" class="text-[11px] px-2.5 py-1 rounded transition border ${poolTagFilter === 'treeKing' ? 'bg-emerald-600 border-emerald-500 text-white font-bold' : 'bg-slate-900 border-slate-800 text-emerald-400 hover:border-slate-700'}">樹王</button>
                         <button onclick="setPoolTagFilter('dragonKing')" class="text-[11px] px-2.5 py-1 rounded transition border ${poolTagFilter === 'dragonKing' ? 'bg-amber-600 border-amber-500 text-white font-bold' : 'bg-slate-900 border-slate-800 text-amber-400 hover:border-slate-700'}">龍王</button>
                     </div>
+
+                    ${!isMasterView ? `
+                    <div class="flex flex-wrap items-center gap-1.5 border-t border-slate-900 pt-2">
+                        <span class="text-xs text-slate-400 mr-1 font-semibold">出席時間：</span>
+                        <button onclick="setPoolDayFilter(-1)" class="text-[11px] px-2.5 py-1 rounded transition border ${poolDayFilter === -1 ? 'bg-blue-600 border-blue-500 text-white font-bold' : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'}">全部</button>
+                        ${GROUP_NAMES.map((dayName, dayIdx) => `
+                            <button onclick="setPoolDayFilter(${dayIdx})" class="text-[11px] px-2.5 py-1 rounded transition border ${poolDayFilter === dayIdx ? 'bg-blue-600 border-blue-500 text-white font-bold' : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'}">${dayName}</button>
+                        `).join("")}
+                    </div>
+                    ` : ""}
 
                     <div class="flex flex-wrap items-center gap-1.5 border-t border-slate-900 pt-2">
                         <span class="text-xs text-slate-400 mr-1 font-semibold">職業篩選：</span>

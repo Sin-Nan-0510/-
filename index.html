@@ -340,8 +340,8 @@
         // activeClass：標籤被選取時的顏色
         // ==========================================
         const SHARED_TAGS = [
-            { key: "treeKing", filterLabel: "樹王", imageLabel: "樹王團", activeClass: "bg-emerald-600 border-emerald-500 text-white", playerClass: "bg-emerald-950 border-emerald-600 text-emerald-300" },
-            { key: "dragonKing", filterLabel: "龍王", imageLabel: "龍王團", activeClass: "bg-amber-600 border-amber-500 text-white", playerClass: "bg-amber-950 border-amber-500 text-amber-300" }
+            { key: "treeKing", filterLabel: "樹王", imageLabel: "克雷塞爾『樹王』", activeClass: "bg-emerald-600 border-emerald-500 text-white", playerClass: "bg-emerald-950 border-emerald-600 text-emerald-300" },
+            { key: "dragonKing", filterLabel: "龍王", imageLabel: "闇黑龍王『龍王』", activeClass: "bg-amber-600 border-amber-500 text-white", playerClass: "bg-amber-950 border-amber-500 text-amber-300" }
         ];
 
         // ==========================================
@@ -1720,7 +1720,7 @@
                 let colHtml = `<div class="share-group-column"><div class="share-group-header-text">${escapeHtml(group.date ? `${GROUP_NAMES[gIdx]} -${group.date}` : GROUP_NAMES[gIdx])}</div>`;
                 teams.forEach((team) => {
                     if ((team.members || []).length > 0) {
-                        colHtml += `<div class="share-team-wrapper"><div class="share-team-title-text">${team.emoji || "⚔️"} ${escapeHtml(team.name)} (${escapeHtml(team.time || "20:00")}) (${team.members.length}人)${team.con ? " (連14場)" : ""}</div>`;
+                        colHtml += `<div class="share-team-wrapper"><div class="share-team-title-text">${team.emoji || "⚔️"} ${escapeHtml(team.name)} (${escapeHtml(team.time || "20:00")}) (${team.members.length}人)${team.con ? " (連14場)" : " (連7場)"}</div>`;
                         colHtml += formatShareHeader(isTeams2);
                         team.members.forEach((p, pIdx) => {
                             if (isTeams2 && pIdx > 0 && pIdx % 6 === 0) {

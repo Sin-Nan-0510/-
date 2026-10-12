@@ -260,6 +260,39 @@
     <!-- 圖片匯出暫存容器 -->
     <div id="share-card"></div>
 
+    <!-- 隊伍新增成員 Modal -->
+    <div id="add-member-modal" class="fixed inset-0 z-[60] hidden flex items-center justify-center bg-black/80 backdrop-blur-sm p-3">
+        <div class="relative flex max-h-[92vh] w-full max-w-6xl flex-col rounded-xl border border-slate-700 bg-slate-900 p-4 md:p-6 shadow-2xl">
+            <div class="mb-4 flex items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                <div>
+                    <h3 id="add-member-modal-title" class="text-lg font-bold text-slate-100">新增成員</h3>
+                    <p id="add-member-modal-subtitle" class="mt-1 text-xs text-slate-400">只顯示當天有填寫時間的成員</p>
+                </div>
+                <button onclick="closeAddMemberModal()" class="rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-white">✕</button>
+            </div>
+            <div class="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-slate-800 bg-slate-950 p-3">
+                <span class="text-xs font-bold text-slate-300">職業篩選</span>
+                <button onclick="setAddMemberJobFilter('')" class="add-member-job-filter rounded border px-2.5 py-1 text-xs">全部職業</button>
+                <div id="add-member-job-filters" class="flex flex-wrap gap-1.5"></div>
+            </div>
+            <div class="flex-1 overflow-auto rounded-lg border border-slate-800">
+                <table class="w-full min-w-[900px] text-left text-xs">
+                    <thead class="sticky top-0 bg-slate-800 text-slate-300">
+                        <tr>
+                            <th class="p-3">等級</th><th class="p-3">職業</th><th class="p-3">名稱</th><th class="p-3">AD/AP</th>
+                            <th class="p-3" id="add-member-day-heading">當天時間</th><th class="p-3">幾場</th><th class="p-3">標籤</th><th class="p-3">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="add-member-list" class="divide-y divide-slate-800"></tbody>
+                </table>
+            </div>
+            <div class="mt-3 flex items-center justify-between gap-3 text-xs text-slate-400">
+                <span id="add-member-count">0 位符合條件</span>
+                <button onclick="closeAddMemberModal()" class="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-slate-200 hover:bg-slate-700">完成</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 圖片預覽 Modal -->
     <div id="image-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
         <div class="relative flex max-h-[90vh] w-full max-w-5xl flex-col rounded-xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
@@ -331,7 +364,7 @@
         const DEFAULT_JOB_CLASS = "bg-slate-900 border-slate-800 text-slate-400";
         const DEFAULT_JOB_STYLE = "background-color: #0f172a; color: #94a3b8;";
 
-        // ========================================== bg-pink-950 border-pink-600 text-pink-300
+        // ========================================== 
         // 共用標籤設定
         // 之後新增標籤，只要在這裡增加一筆即可。
         // key：玩家資料使用的欄位
@@ -342,8 +375,8 @@
         const SHARED_TAGS = [
             { key: "treeKing", filterLabel: "樹王", imageLabel: "克雷塞爾『樹王』", activeClass: "bg-emerald-600 border-emerald-500 text-white", playerClass: "bg-emerald-950 border-emerald-600 text-emerald-300" },
             { key: "dragonKing", filterLabel: "龍王", imageLabel: "闇黑龍王『龍王』", activeClass: "bg-amber-600 border-amber-500 text-white", playerClass: "bg-amber-950 border-amber-500 text-amber-300" },
-            { key: "hardLotus", filterLabel: "困拉", imageLabel: "『困難拉圖斯』", activeClass: "bg-pink-600 border-pink-500 text-white", playerClass: "bg-pink-950 border-pink-600 text-pink-300" },
-            { key: "poisonButterfly", filterLabel: "毒蝴蝶", imageLabel: "艾畢奈亞『毒蝴蝶』", activeClass: "bg-violet-600 border-violet-500 text-white", playerClass: "bg-violet-950 border-violet-600 text-violet-300" },
+            { key: "hardLotus", filterLabel: "困拉", imageLabel: "『困難拉圖斯』", activeClass: "bg-pink-600 border-pink-500 text-white", playerClass: "bg-violet-950 border-violet-600 text-violet-300" },
+            { key: "poisonButterfly", filterLabel: "毒蝴蝶", imageLabel: "艾畢奈亞『毒蝴蝶』", activeClass: "bg-violet-600 border-violet-500 text-white", playerClass: "bg-pink-950 border-pink-600 text-pink-300" },
             //{ key: "iceButterfly", filterLabel: "冰蝴蝶", imageLabel: "艾畢奈亞『冰蝴蝶』", activeClass: "bg-cyan-600 border-cyan-500 text-white", playerClass: "bg-cyan-950 border-cyan-600 text-cyan-300" }
         ];
 
@@ -1366,6 +1399,7 @@
                                     <button onclick="moveEntireTeamToTargetGroup(${tIdx}, document.getElementById('move-team-select-${isTeams2 ? '2_' : ''}${tIdx}').value, ${isTeams2})" class="rounded bg-blue-600 hover:bg-blue-500 px-2.5 py-1 text-xs font-bold text-white transition">確認轉移</button>
                                 </div>
                                 <span class="rounded-full bg-slate-800 px-2.5 py-1 text-xs text-slate-300">${members.length} 人</span>
+                                <button onclick="openAddMemberModal(${tIdx}, ${isTeams2})" class="rounded-lg border border-emerald-700 bg-emerald-950/70 px-3 py-1.5 text-xs font-bold text-emerald-300 hover:bg-emerald-900 transition">➕ 添加成員</button>
                             </div>
                         </div>
                         <div id="${listTypePrefix}${tIdx}-list" data-list-type="${listTypePrefix}${tIdx}" class="sortable-list ${gridClass} min-h-[80px]">
@@ -1375,6 +1409,123 @@
                 `;
             });
             return html;
+        }
+
+        // 隊伍「添加成員」彈窗：依目前選取的星期，只列出當天有填時間的人。
+        let addMemberTarget = { teamIdx: -1, isTeams2: false };
+        let addMemberJobFilter = "";
+
+        function openAddMemberModal(teamIdx, isTeams2 = false) {
+            addMemberTarget = { teamIdx, isTeams2 };
+            addMemberJobFilter = "";
+            const groupIdx = isTeams2 ? state.activeGroup2 : state.activeGroup;
+            document.getElementById("add-member-modal-title").textContent =
+                `添加成員至 ${GROUP_NAMES[groupIdx]}・${currentGroup(isTeams2).teams[teamIdx]?.name || `第${teamIdx + 1}隊`}`;
+            document.getElementById("add-member-modal-subtitle").textContent =
+                `只顯示「${GROUP_NAMES[groupIdx]}」有填寫時間的成員；加入後會直接放進這支隊伍。`;
+            document.getElementById("add-member-day-heading").textContent = `${GROUP_NAMES[groupIdx]}時間`;
+            document.getElementById("add-member-job-filters").innerHTML = JOB_LIST.map(job => `
+                <button onclick="setAddMemberJobFilter('${job}')" data-job="${job}"
+                    class="add-member-job-filter rounded border px-2.5 py-1 text-xs transition">${job}</button>
+            `).join("");
+            renderAddMemberList();
+            document.getElementById("add-member-modal").classList.remove("hidden");
+        }
+
+        function closeAddMemberModal() {
+            document.getElementById("add-member-modal").classList.add("hidden");
+        }
+
+        function setAddMemberJobFilter(job) {
+            addMemberJobFilter = job;
+            document.querySelectorAll(".add-member-job-filter").forEach(btn => {
+                const selected = (btn.dataset.job || "") === addMemberJobFilter;
+                btn.className = `add-member-job-filter rounded border px-2.5 py-1 text-xs transition ${
+                    selected ? "border-blue-500 bg-blue-600 text-white font-bold" : "border-slate-700 bg-slate-800 text-slate-300 hover:border-blue-500"
+                }`;
+            });
+            renderAddMemberList();
+        }
+
+        function renderAddMemberList() {
+            const { teamIdx, isTeams2 } = addMemberTarget;
+            const groupIdx = isTeams2 ? state.activeGroup2 : state.activeGroup;
+            const team = currentGroup(isTeams2).teams[teamIdx];
+            if (!team) return;
+            const alreadyInTeam = new Set((team.members || []).map(p => String(p.id)));
+            const rows = (state.pool || []).filter(p => {
+                const availability = getPlayerWeekAvailability(p, state.activeWeek);
+                return String(availability[groupIdx] || "").trim() !== "" &&
+                    (!addMemberJobFilter || p.job === addMemberJobFilter) &&
+                    !alreadyInTeam.has(String(p.id));
+            });
+
+            const tagText = p => SHARED_TAGS.filter(tag => p[tag.key]).map(tag => tag.filterLabel);
+            document.getElementById("add-member-list").innerHTML = rows.length ? rows.map(p => {
+                const availability = getPlayerWeekAvailability(p, state.activeWeek);
+                const tags = tagText(p);
+                const weeklyData = currentWeekData();
+                const limitReached = hasReachedWeeklyLimit(p, weeklyData);
+                const assigned12 = isTeams2 && isPlayerAssignedTo12Team(p.id, weeklyData);
+                const disabled = limitReached || assigned12;
+                const reason = assigned12 ? "已排入12人隊伍" : (limitReached ? "已達本週場次上限" : "加入此隊");
+                return `<tr class="hover:bg-slate-800/60">
+                    <td class="p-3 font-bold text-blue-300">${escapeHtml(getPlayerLevel(p) || "---")}</td>
+                    <td class="p-3"><span class="inline-block rounded border px-2 py-1 ${getJobColorClass(p.job)}">${escapeHtml(p.job || "未設定")}</span></td>
+                    <td class="p-3 font-bold text-slate-100">${escapeHtml(p.name || "未命名")}</td>
+                    <td class="p-3 text-slate-300">${escapeHtml(p.position || "---")}</td>
+                    <td class="p-3 font-semibold text-cyan-300">${escapeHtml(availability[groupIdx] || "")}</td>
+                    <td class="p-3 text-yellow-300">${escapeHtml(p.rounds || "7")}場</td>
+                    <td class="p-3"><div class="flex flex-wrap gap-1">${tags.length ? tags.map(t => `<span class="rounded border border-slate-700 bg-slate-800 px-2 py-1 text-[10px] text-slate-300">${escapeHtml(t)}</span>`).join("") : '<span class="text-slate-600">—</span>'}</div></td>
+                    <td class="p-3"><button ${disabled ? "disabled" : ""} onclick="addPoolMemberToTeam('${String(p.id).replaceAll("'", "\\'")}', ${teamIdx}, ${isTeams2})"
+                        class="rounded border px-3 py-1.5 text-xs font-bold ${disabled ? "cursor-not-allowed border-slate-700 bg-slate-800 text-slate-500" : "border-emerald-700 bg-emerald-950 text-emerald-300 hover:bg-emerald-900"}">${disabled ? reason : "＋ 添加"}</button></td>
+                </tr>`;
+            }).join("") : `<tr><td colspan="8" class="p-8 text-center text-slate-500">沒有符合條件的成員。請確認成員已填寫「${GROUP_NAMES[groupIdx]}」時間，或調整職業篩選。</td></tr>`;
+            document.getElementById("add-member-count").textContent = `${rows.length} 位符合條件`;
+            setAddMemberJobFilterStylesOnly();
+        }
+
+        function setAddMemberJobFilterStylesOnly() {
+            document.querySelectorAll(".add-member-job-filter").forEach(btn => {
+                const selected = (btn.dataset.job || "") === addMemberJobFilter;
+                btn.className = `add-member-job-filter rounded border px-2.5 py-1 text-xs transition ${
+                    selected ? "border-blue-500 bg-blue-600 text-white font-bold" : "border-slate-700 bg-slate-800 text-slate-300 hover:border-blue-500"
+                }`;
+            });
+        }
+
+        function addPoolMemberToTeam(playerId, teamIdx, isTeams2 = false) {
+            const groupIdx = isTeams2 ? state.activeGroup2 : state.activeGroup;
+            const availability = getPlayerWeekAvailability(state.pool.find(p => String(p.id) === String(playerId)), state.activeWeek);
+            if (!String(availability[groupIdx] || "").trim()) {
+                alert(`此成員沒有填寫${GROUP_NAMES[groupIdx]}的時間。`);
+                renderAddMemberList();
+                return;
+            }
+            transactionUpdate(data => {
+                const p = data.pool.find(item => String(item.id) === String(playerId));
+                const wData = data.weeksData[state.activeWeek];
+                const groupsArr = isTeams2 ? wData.groups2 : wData.groups;
+                const targetTeam = groupsArr[groupIdx]?.teams?.[teamIdx];
+                if (!p || !targetTeam) return false;
+                if (isTeams2 && isPlayerAssignedTo12Team(playerId, wData)) {
+                    alert("此玩家已排入本週 12 人隊伍，請先從原隊伍移除後再重新安排！");
+                    return false;
+                }
+                if (hasReachedWeeklyLimit(p, wData)) {
+                    alert("此玩家本週已達出賽上限！");
+                    return false;
+                }
+                if ((targetTeam.members || []).some(m => String(m.id) === String(playerId))) return false;
+                const newMember = { ...p };
+                if (isTeams2) newMember.note = "";
+                targetTeam.members.push(newMember);
+                return true;
+            });
+            // 重新整理名單；若已成功加入，該成員會自動從可加入名單中消失。
+            setTimeout(() => {
+                if (!document.getElementById("add-member-modal").classList.contains("hidden")) renderAddMemberList();
+            }, 100);
         }
 
         function renderPool(isMasterView, isTeams2 = false) {

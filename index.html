@@ -1395,7 +1395,10 @@
             if (jobWrap) jobWrap.innerHTML = jobs.map(j => `<button onclick="setRosterPickerJob('${j}')" class="rounded-md border px-3 py-1.5 text-xs font-semibold transition ${job === j ? "border-blue-500 bg-blue-600 text-white" : "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700"}">${j}</button>`).join("");
 
             const assigned = new Set((team?.members || []).map(p => String(p.id)));
+            const weekData = state.weeksData?.[state.activeWeek] || {};
             const players = (state.pool || []).filter(p => {
+                // 本週已達出賽場次上限的玩家，不顯示在可加入名單中。
+                if (hasReachedWeeklyLimit(p, weekData)) return false;
                 if (job !== "全部職業" && p.job !== job) return false;
                 if (availableOnly) {
                     const availability = getPlayerWeekAvailability(p, state.activeWeek);
@@ -1406,7 +1409,7 @@
             });
             const list = document.getElementById("roster-picker-list");
             const count = document.getElementById("roster-picker-count");
-            if (count) count.textContent = `符合 ${players.length} 人｜目前隊伍 ${team?.members?.length || 0} 人${availableOnly ? `｜僅顯示${dayName}有填時間` : ""}`;
+            if (count) count.textContent = `符合 ${players.length} 人｜目前隊伍 ${team?.members?.length || 0} 人${availableOnly ? `｜僅顯示${dayName}有填時間` : "｜不含本週已達場次上限者"}｜已達本週場次上限者不顯示`;
             if (!list) return;
             if (!players.length) {
                 list.innerHTML = `<div class="p-10 text-center text-sm text-slate-500">沒有符合條件的玩家</div>`;

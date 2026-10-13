@@ -199,6 +199,10 @@
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <h2 class="text-base font-bold text-slate-200">遠征團管理 (6人)</h2>
                     </div>
+                    <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <button onclick="openImageGenModal(false)" class="rounded-lg border border-blue-900 bg-blue-950/50 px-4 py-3 text-sm font-bold text-blue-300 transition hover:bg-blue-900/50">🖼️ 產生全部團隊圖片</button>
+                        <button onclick="clearCurrentGroup(false)" class="rounded-lg border border-slate-800 bg-slate-800 px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-slate-700">🧹 清空當前團隊伍</button>
+                    </div>
                     <div id="group-tabs" class="mt-4 flex flex-wrap gap-3"></div>
                 </div>
 
@@ -216,12 +220,6 @@
                 <div id="teams-cards-container" class="space-y-6"></div>
                 <div id="teams-pool-container"></div>
 
-                <div class="rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-sm">
-                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <button onclick="openImageGenModal(false)" class="rounded-lg border border-blue-900 bg-blue-950/50 px-4 py-3 text-sm font-bold text-blue-300 transition hover:bg-blue-900/50">🖼️ 產生全部團隊圖片</button>
-                        <button onclick="clearCurrentGroup(false)" class="rounded-lg border border-slate-800 bg-slate-800 px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-slate-700">🧹 清空當前團隊伍</button>
-                    </div>
-                </div>
             </div>
 
             <!-- 隊伍分配頁面 2 (12人，兩欄式緊湊版面) -->
@@ -229,6 +227,10 @@
                 <div class="rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-sm">
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <h2 class="text-base font-bold text-slate-200">遠征團管理 (12人)</h2>
+                    </div>
+                    <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <button onclick="openImageGenModal(true)" class="rounded-lg border border-blue-900 bg-blue-950/50 px-4 py-3 text-sm font-bold text-blue-300 transition hover:bg-blue-900/50">🖼️ 產生全部團隊圖片</button>
+                        <button onclick="clearCurrentGroup(true)" class="rounded-lg border border-slate-800 bg-slate-800 px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-slate-700">🧹 清空當前團隊伍</button>
                     </div>
                     <div id="group-tabs-2" class="mt-4 flex flex-wrap gap-3"></div>
                 </div>
@@ -247,51 +249,12 @@
                 <div id="teams-cards-container-2" class="space-y-6"></div>
                 <div id="teams-pool-container-2"></div>
 
-                <div class="rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-sm">
-                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <button onclick="openImageGenModal(true)" class="rounded-lg border border-blue-900 bg-blue-950/50 px-4 py-3 text-sm font-bold text-blue-300 transition hover:bg-blue-900/50">🖼️ 產生全部團隊圖片</button>
-                        <button onclick="clearCurrentGroup(true)" class="rounded-lg border border-slate-800 bg-slate-800 px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-slate-700">🧹 清空當前團隊伍</button>
-                    </div>
-                </div>
             </div>
         </main>
     </div>
 
     <!-- 圖片匯出暫存容器 -->
     <div id="share-card"></div>
-
-    <!-- 隊伍新增成員 Modal -->
-    <div id="add-member-modal" class="fixed inset-0 z-[60] hidden flex items-center justify-center bg-black/80 backdrop-blur-sm p-3">
-        <div class="relative flex max-h-[92vh] w-full max-w-6xl flex-col rounded-xl border border-slate-700 bg-slate-900 p-4 md:p-6 shadow-2xl">
-            <div class="mb-4 flex items-center justify-between gap-3 border-b border-slate-800 pb-3">
-                <div>
-                    <h3 id="add-member-modal-title" class="text-lg font-bold text-slate-100">新增成員</h3>
-                    <p id="add-member-modal-subtitle" class="mt-1 text-xs text-slate-400">只顯示當天有填寫時間的成員</p>
-                </div>
-                <button onclick="closeAddMemberModal()" class="rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-white">✕</button>
-            </div>
-            <div class="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-slate-800 bg-slate-950 p-3">
-                <span class="text-xs font-bold text-slate-300">職業篩選</span>
-                <button onclick="setAddMemberJobFilter('')" class="add-member-job-filter rounded border px-2.5 py-1 text-xs">全部職業</button>
-                <div id="add-member-job-filters" class="flex flex-wrap gap-1.5"></div>
-            </div>
-            <div class="flex-1 overflow-auto rounded-lg border border-slate-800">
-                <table class="w-full min-w-[900px] text-left text-xs">
-                    <thead class="sticky top-0 bg-slate-800 text-slate-300">
-                        <tr>
-                            <th class="p-3">等級</th><th class="p-3">職業</th><th class="p-3">名稱</th><th class="p-3">AD/AP</th>
-                            <th class="p-3" id="add-member-day-heading">當天時間</th><th class="p-3">幾場</th><th class="p-3">標籤</th><th class="p-3">操作</th>
-                        </tr>
-                    </thead>
-                    <tbody id="add-member-list" class="divide-y divide-slate-800"></tbody>
-                </table>
-            </div>
-            <div class="mt-3 flex items-center justify-between gap-3 text-xs text-slate-400">
-                <span id="add-member-count">0 位符合條件</span>
-                <button onclick="closeAddMemberModal()" class="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-slate-200 hover:bg-slate-700">完成</button>
-            </div>
-        </div>
-    </div>
 
     <!-- 圖片預覽 Modal -->
     <div id="image-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
@@ -300,21 +263,8 @@
                 <h3 id="modal-title" class="text-lg font-bold text-slate-100">團隊圖片預覽</h3>
                 <button onclick="closeModal()" class="rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-white">✕</button>
             </div>
-            <div class="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-slate-800 bg-slate-950 p-3">
-                <span class="text-xs font-bold text-slate-300 mr-1">圖片標籤</span>
-                <div id="image-export-title" class="flex flex-wrap gap-2"></div>
-                <span class="text-xs text-slate-500">點一下立即更新圖片，標題會置中顯示在圖片最上方</span>
-            </div>
-            <div class="relative flex flex-1 items-center justify-center overflow-auto rounded-lg bg-slate-950 p-2">
-                <img id="modal-img" class="max-h-[65vh] rounded object-contain shadow-lg" src="" alt="團隊圖片預覽">
-            </div>
-            <div class="mt-4 border-t border-slate-800 pt-4">
-                <div id="image-day-buttons" class="flex flex-wrap gap-2"></div>
-            </div>
-            <div class="mt-4 flex items-center justify-end gap-2 border-t border-slate-800 pt-4">
-                <button id="btn-copy-img" onclick="copyModalImage()" class="rounded-lg border border-blue-600 bg-blue-600/20 px-3 py-1.5 text-xs font-semibold text-blue-300 hover:bg-blue-600/40 transition-colors">📋 複製圖片</button>
-                <button onclick="downloadModalImage()" class="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-500">💾 下載圖片</button>
-            </div>
+            <p class="mb-3 text-xs text-slate-400">系統會依照隊伍標籤自動產生多張圖片。可在每張圖片下方個別選擇日期，再複製或下載該張圖片。</p>
+            <div id="image-list" class="min-h-0 flex-1 space-y-5 overflow-y-auto rounded-lg bg-slate-950 p-3"></div>
         </div>
     </div>
 
@@ -364,7 +314,7 @@
         const DEFAULT_JOB_CLASS = "bg-slate-900 border-slate-800 text-slate-400";
         const DEFAULT_JOB_STYLE = "background-color: #0f172a; color: #94a3b8;";
 
-        // ========================================== 
+        // ========================================== bg-pink-950 border-pink-600 text-pink-300
         // 共用標籤設定
         // 之後新增標籤，只要在這裡增加一筆即可。
         // key：玩家資料使用的欄位
@@ -375,8 +325,8 @@
         const SHARED_TAGS = [
             { key: "treeKing", filterLabel: "樹王", imageLabel: "克雷塞爾『樹王』", activeClass: "bg-emerald-600 border-emerald-500 text-white", playerClass: "bg-emerald-950 border-emerald-600 text-emerald-300" },
             { key: "dragonKing", filterLabel: "龍王", imageLabel: "闇黑龍王『龍王』", activeClass: "bg-amber-600 border-amber-500 text-white", playerClass: "bg-amber-950 border-amber-500 text-amber-300" },
-            { key: "hardLotus", filterLabel: "困拉", imageLabel: "『困難拉圖斯』", activeClass: "bg-pink-600 border-pink-500 text-white", playerClass: "bg-violet-950 border-violet-600 text-violet-300" },
-            { key: "poisonButterfly", filterLabel: "毒蝴蝶", imageLabel: "艾畢奈亞『毒蝴蝶』", activeClass: "bg-violet-600 border-violet-500 text-white", playerClass: "bg-pink-950 border-pink-600 text-pink-300" },
+            { key: "hardLotus", filterLabel: "困拉", imageLabel: "『困難拉圖斯』", activeClass: "bg-pink-600 border-pink-500 text-white", playerClass: "bg-pink-950 border-pink-600 text-pink-300" },
+            { key: "poisonButterfly", filterLabel: "毒蝴蝶", imageLabel: "艾畢奈亞『毒蝴蝶』", activeClass: "bg-violet-600 border-violet-500 text-white", playerClass: "bg-violet-950 border-violet-600 text-violet-300" },
             //{ key: "iceButterfly", filterLabel: "冰蝴蝶", imageLabel: "艾畢奈亞『冰蝴蝶』", activeClass: "bg-cyan-600 border-cyan-500 text-white", playerClass: "bg-cyan-950 border-cyan-600 text-cyan-300" }
         ];
 
@@ -581,6 +531,7 @@
                     emoji: t.emoji || "⚔️",
                     time: t.time || "20:00",
                     con: Boolean(t.con),
+                    tag: SHARED_TAGS.some(tag => tag.key === t.tag) ? t.tag : "",
                     members: Array.isArray(t.members) ? t.members.map(p => normalizePlayer(p, wk)).filter(Boolean) : []
                 })) : createDefaultTeams(isTeams2);
                 
@@ -1014,6 +965,16 @@
             });
         }
 
+        function updateTeamTag(tIdx, tagKey, isTeams2 = false) {
+            transactionUpdate(data => {
+                const wData = data.weeksData[state.activeWeek];
+                const groupsArr = isTeams2 ? wData.groups2 : wData.groups;
+                const team = groupsArr[isTeams2 ? state.activeGroup2 : state.activeGroup].teams[tIdx];
+                if (team) team.tag = SHARED_TAGS.some(tag => tag.key === tagKey) ? tagKey : "";
+                return true;
+            });
+        }
+
         function updateGroupDate(idx, date, isTeams2 = false) {
             transactionUpdate(data => { 
                 const wData = data.weeksData[state.activeWeek];
@@ -1381,6 +1342,10 @@
                                         <input type="radio" name="team-rounds-${isTeams2 ? '2_' : ''}${tIdx}" ${team.con ? "checked" : ""} onchange="updateTeamCon(${tIdx}, true, ${isTeams2})"> 連14場
                                     </label>
                                 </div>
+                                <select onchange="updateTeamTag(${tIdx}, this.value, ${isTeams2})" class="rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs font-bold text-violet-200">
+                                    <option value="" ${!team.tag ? "selected" : ""}>隊伍標籤</option>
+                                    ${SHARED_TAGS.map(tag => `<option value="${tag.key}" ${team.tag === tag.key ? "selected" : ""}>${tag.filterLabel}</option>`).join("")}
+                                </select>
                             </div>
 
                             <div class="flex items-center gap-2 flex-wrap">
@@ -1399,7 +1364,6 @@
                                     <button onclick="moveEntireTeamToTargetGroup(${tIdx}, document.getElementById('move-team-select-${isTeams2 ? '2_' : ''}${tIdx}').value, ${isTeams2})" class="rounded bg-blue-600 hover:bg-blue-500 px-2.5 py-1 text-xs font-bold text-white transition">確認轉移</button>
                                 </div>
                                 <span class="rounded-full bg-slate-800 px-2.5 py-1 text-xs text-slate-300">${members.length} 人</span>
-                                <button onclick="openAddMemberModal(${tIdx}, ${isTeams2})" class="rounded-lg border border-emerald-700 bg-emerald-950/70 px-3 py-1.5 text-xs font-bold text-emerald-300 hover:bg-emerald-900 transition">➕ 添加成員</button>
                             </div>
                         </div>
                         <div id="${listTypePrefix}${tIdx}-list" data-list-type="${listTypePrefix}${tIdx}" class="sortable-list ${gridClass} min-h-[80px]">
@@ -1409,123 +1373,6 @@
                 `;
             });
             return html;
-        }
-
-        // 隊伍「添加成員」彈窗：依目前選取的星期，只列出當天有填時間的人。
-        let addMemberTarget = { teamIdx: -1, isTeams2: false };
-        let addMemberJobFilter = "";
-
-        function openAddMemberModal(teamIdx, isTeams2 = false) {
-            addMemberTarget = { teamIdx, isTeams2 };
-            addMemberJobFilter = "";
-            const groupIdx = isTeams2 ? state.activeGroup2 : state.activeGroup;
-            document.getElementById("add-member-modal-title").textContent =
-                `添加成員至 ${GROUP_NAMES[groupIdx]}・${currentGroup(isTeams2).teams[teamIdx]?.name || `第${teamIdx + 1}隊`}`;
-            document.getElementById("add-member-modal-subtitle").textContent =
-                `只顯示「${GROUP_NAMES[groupIdx]}」有填寫時間的成員；加入後會直接放進這支隊伍。`;
-            document.getElementById("add-member-day-heading").textContent = `${GROUP_NAMES[groupIdx]}時間`;
-            document.getElementById("add-member-job-filters").innerHTML = JOB_LIST.map(job => `
-                <button onclick="setAddMemberJobFilter('${job}')" data-job="${job}"
-                    class="add-member-job-filter rounded border px-2.5 py-1 text-xs transition">${job}</button>
-            `).join("");
-            renderAddMemberList();
-            document.getElementById("add-member-modal").classList.remove("hidden");
-        }
-
-        function closeAddMemberModal() {
-            document.getElementById("add-member-modal").classList.add("hidden");
-        }
-
-        function setAddMemberJobFilter(job) {
-            addMemberJobFilter = job;
-            document.querySelectorAll(".add-member-job-filter").forEach(btn => {
-                const selected = (btn.dataset.job || "") === addMemberJobFilter;
-                btn.className = `add-member-job-filter rounded border px-2.5 py-1 text-xs transition ${
-                    selected ? "border-blue-500 bg-blue-600 text-white font-bold" : "border-slate-700 bg-slate-800 text-slate-300 hover:border-blue-500"
-                }`;
-            });
-            renderAddMemberList();
-        }
-
-        function renderAddMemberList() {
-            const { teamIdx, isTeams2 } = addMemberTarget;
-            const groupIdx = isTeams2 ? state.activeGroup2 : state.activeGroup;
-            const team = currentGroup(isTeams2).teams[teamIdx];
-            if (!team) return;
-            const alreadyInTeam = new Set((team.members || []).map(p => String(p.id)));
-            const rows = (state.pool || []).filter(p => {
-                const availability = getPlayerWeekAvailability(p, state.activeWeek);
-                return String(availability[groupIdx] || "").trim() !== "" &&
-                    (!addMemberJobFilter || p.job === addMemberJobFilter) &&
-                    !alreadyInTeam.has(String(p.id));
-            });
-
-            const tagText = p => SHARED_TAGS.filter(tag => p[tag.key]).map(tag => tag.filterLabel);
-            document.getElementById("add-member-list").innerHTML = rows.length ? rows.map(p => {
-                const availability = getPlayerWeekAvailability(p, state.activeWeek);
-                const tags = tagText(p);
-                const weeklyData = currentWeekData();
-                const limitReached = hasReachedWeeklyLimit(p, weeklyData);
-                const assigned12 = isTeams2 && isPlayerAssignedTo12Team(p.id, weeklyData);
-                const disabled = limitReached || assigned12;
-                const reason = assigned12 ? "已排入12人隊伍" : (limitReached ? "已達本週場次上限" : "加入此隊");
-                return `<tr class="hover:bg-slate-800/60">
-                    <td class="p-3 font-bold text-blue-300">${escapeHtml(getPlayerLevel(p) || "---")}</td>
-                    <td class="p-3"><span class="inline-block rounded border px-2 py-1 ${getJobColorClass(p.job)}">${escapeHtml(p.job || "未設定")}</span></td>
-                    <td class="p-3 font-bold text-slate-100">${escapeHtml(p.name || "未命名")}</td>
-                    <td class="p-3 text-slate-300">${escapeHtml(p.position || "---")}</td>
-                    <td class="p-3 font-semibold text-cyan-300">${escapeHtml(availability[groupIdx] || "")}</td>
-                    <td class="p-3 text-yellow-300">${escapeHtml(p.rounds || "7")}場</td>
-                    <td class="p-3"><div class="flex flex-wrap gap-1">${tags.length ? tags.map(t => `<span class="rounded border border-slate-700 bg-slate-800 px-2 py-1 text-[10px] text-slate-300">${escapeHtml(t)}</span>`).join("") : '<span class="text-slate-600">—</span>'}</div></td>
-                    <td class="p-3"><button ${disabled ? "disabled" : ""} onclick="addPoolMemberToTeam('${String(p.id).replaceAll("'", "\\'")}', ${teamIdx}, ${isTeams2})"
-                        class="rounded border px-3 py-1.5 text-xs font-bold ${disabled ? "cursor-not-allowed border-slate-700 bg-slate-800 text-slate-500" : "border-emerald-700 bg-emerald-950 text-emerald-300 hover:bg-emerald-900"}">${disabled ? reason : "＋ 添加"}</button></td>
-                </tr>`;
-            }).join("") : `<tr><td colspan="8" class="p-8 text-center text-slate-500">沒有符合條件的成員。請確認成員已填寫「${GROUP_NAMES[groupIdx]}」時間，或調整職業篩選。</td></tr>`;
-            document.getElementById("add-member-count").textContent = `${rows.length} 位符合條件`;
-            setAddMemberJobFilterStylesOnly();
-        }
-
-        function setAddMemberJobFilterStylesOnly() {
-            document.querySelectorAll(".add-member-job-filter").forEach(btn => {
-                const selected = (btn.dataset.job || "") === addMemberJobFilter;
-                btn.className = `add-member-job-filter rounded border px-2.5 py-1 text-xs transition ${
-                    selected ? "border-blue-500 bg-blue-600 text-white font-bold" : "border-slate-700 bg-slate-800 text-slate-300 hover:border-blue-500"
-                }`;
-            });
-        }
-
-        function addPoolMemberToTeam(playerId, teamIdx, isTeams2 = false) {
-            const groupIdx = isTeams2 ? state.activeGroup2 : state.activeGroup;
-            const availability = getPlayerWeekAvailability(state.pool.find(p => String(p.id) === String(playerId)), state.activeWeek);
-            if (!String(availability[groupIdx] || "").trim()) {
-                alert(`此成員沒有填寫${GROUP_NAMES[groupIdx]}的時間。`);
-                renderAddMemberList();
-                return;
-            }
-            transactionUpdate(data => {
-                const p = data.pool.find(item => String(item.id) === String(playerId));
-                const wData = data.weeksData[state.activeWeek];
-                const groupsArr = isTeams2 ? wData.groups2 : wData.groups;
-                const targetTeam = groupsArr[groupIdx]?.teams?.[teamIdx];
-                if (!p || !targetTeam) return false;
-                if (isTeams2 && isPlayerAssignedTo12Team(playerId, wData)) {
-                    alert("此玩家已排入本週 12 人隊伍，請先從原隊伍移除後再重新安排！");
-                    return false;
-                }
-                if (hasReachedWeeklyLimit(p, wData)) {
-                    alert("此玩家本週已達出賽上限！");
-                    return false;
-                }
-                if ((targetTeam.members || []).some(m => String(m.id) === String(playerId))) return false;
-                const newMember = { ...p };
-                if (isTeams2) newMember.note = "";
-                targetTeam.members.push(newMember);
-                return true;
-            });
-            // 重新整理名單；若已成功加入，該成員會自動從可加入名單中消失。
-            setTimeout(() => {
-                if (!document.getElementById("add-member-modal").classList.contains("hidden")) renderAddMemberList();
-            }, 100);
         }
 
         function renderPool(isMasterView, isTeams2 = false) {
@@ -1789,203 +1636,174 @@
         let imageGenerationToken = 0;
         // 圖片內標題：可在預覽視窗自行輸入，例如「樹王團」或「龍王團」。
         let imageExportTitle = "";
+        let imageExportTagFilter = "";
 
-        function renderImageDayButtons() {
-            const container = document.getElementById("image-day-buttons");
-            if (!container) return;
-
-            const wData = currentWeekData();
-            const groupsArr = pendingImageGenIsTeams2 ? wData.groups2 : wData.groups;
-            let html = "";
-
-            groupsArr.forEach((group, gIdx) => {
-                const teams = group.teams || [];
-                const hasTeamWithMembers = teams.some(t => (t.members || []).length > 0);
-                const selected = imageGenSelectedIndices.includes(gIdx);
-                const dayName = GROUP_NAMES[gIdx];
-                const dateStr = group.date ? ` (${group.date})` : "";
-
-                html += `
-                    <button onclick="toggleImageDay(${gIdx})"
-                        ${hasTeamWithMembers ? '' : 'disabled'}
-                        class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${selected ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-700 bg-slate-800 text-slate-400 hover:bg-slate-700'} ${hasTeamWithMembers ? '' : 'opacity-60 cursor-not-allowed'}">
-                        ${dayName}${dateStr}
-                    </button>
-                `;
-            });
-
-            container.innerHTML = html;
-        }
+        function renderImageDayButtons() { /* 每張圖片的日期按鈕由 renderImageCards 個別繪製 */ }
 
         async function openImageGenModal(isTeams2 = false) {
             pendingImageGenIsTeams2 = isTeams2;
+            imageExportTagFilter = "";
+            imageExportTitle = "";
             const wData = currentWeekData();
             const groupsArr = isTeams2 ? wData.groups2 : wData.groups;
-
-            imageGenSelectedIndices = [];
-            groupsArr.forEach((group, gIdx) => {
-                const teams = group.teams || [];
-                if (teams.some(t => (t.members || []).length > 0)) {
-                    imageGenSelectedIndices.push(gIdx);
-                }
-            });
-
+            imageGenSelectedIndices = groupsArr.map((g, i) => ({g, i})).filter(x => (x.g.teams || []).some(t => (t.members || []).length > 0)).map(x => x.i);
             await generateSelectedTeamsImage(false);
         }
 
-        function toggleImageDay(gIdx) {
-            const index = imageGenSelectedIndices.indexOf(gIdx);
-            if (index > -1) {
-                imageGenSelectedIndices.splice(index, 1);
-            } else {
-                imageGenSelectedIndices.push(gIdx);
-            }
-
-            renderImageDayButtons();
-            generateSelectedTeamsImage(true);
+        async function toggleImageTagDay(tagKey, gIdx) {
+            const item = previewImages.find(x => x.tagKey === tagKey);
+            if (!item) return;
+            const idx = item.selectedIndices.indexOf(gIdx);
+            if (idx >= 0) item.selectedIndices.splice(idx, 1);
+            else item.selectedIndices.push(gIdx);
+            item.selectedIndices.sort((a,b) => a-b);
+            await regenerateTagImage(tagKey);
         }
 
-        async function generateSelectedTeamsImage(showAlertOnEmpty = true) {
-            const generationToken = ++imageGenerationToken;
-            const isTeams2 = pendingImageGenIsTeams2;
-            const selectedIndices = [...imageGenSelectedIndices].sort((a, b) => a - b);
-
-            if (selectedIndices.length === 0) {
-                if (showAlertOnEmpty) alert("請至少選擇一個要產生的日期！");
-                return false;
-            }
-
-            if (typeof html2canvas === "undefined") return false;
-            const shareCard = document.getElementById("share-card");
-            const wData = currentWeekData();
-            const groupsArr = isTeams2 ? wData.groups2 : wData.groups;
+        function buildTagImageMarkup(tag, selectedIndices, isTeams2, groupsArr) {
             let columnsHtml = "", count = 0;
-            const exportTitle = String(imageExportTitle || "").trim();
-            const titleHtml = exportTitle
-                ? `<div class="share-export-title">${escapeHtml(exportTitle)}</div>`
-                : "";
-
-            selectedIndices.forEach((gIdx) => {
+            selectedIndices.forEach(gIdx => {
                 const group = groupsArr[gIdx];
                 if (!group) return;
-                const teams = group.teams || [];
-                if (!teams.some(t => (t.members || []).length > 0)) return;
-
+                const filteredTeams = (group.teams || []).filter(t => (t.members || []).length > 0 && t.tag === tag.key);
+                if (!filteredTeams.length) return;
                 let colHtml = `<div class="share-group-column"><div class="share-group-header-text">${escapeHtml(group.date ? `${GROUP_NAMES[gIdx]} -${group.date}` : GROUP_NAMES[gIdx])}</div>`;
-                teams.forEach((team) => {
-                    if ((team.members || []).length > 0) {
-                        colHtml += `<div class="share-team-wrapper"><div class="share-team-title-text">${team.emoji || "⚔️"} ${escapeHtml(team.name)} (${escapeHtml(team.time || "20:00")}) (${team.members.length}人)${team.con ? " (連14場)" : " (連7場)"}</div>`;
-                        colHtml += formatShareHeader(isTeams2);
-                        team.members.forEach((p, pIdx) => {
-                            if (isTeams2 && pIdx > 0 && pIdx % 6 === 0) {
-                                colHtml += `<div class="share-divider-line"></div>`;
-                            }
-                            colHtml += formatShareLine(p, isTeams2);
-                        });
-                        colHtml += `</div>`;
-                    }
+                filteredTeams.forEach(team => {
+                    colHtml += `<div class="share-team-wrapper"><div class="share-team-title-text">${team.emoji || "⚔️"} ${escapeHtml(team.name)} (${escapeHtml(team.time || "20:00")}) (${team.members.length}人)${team.con ? " (連14場)" : " (連7場)"}</div>`;
+                    colHtml += formatShareHeader(isTeams2);
+                    team.members.forEach((p, pIdx) => {
+                        if (isTeams2 && pIdx > 0 && pIdx % 6 === 0) colHtml += `<div class="share-divider-line"></div>`;
+                        colHtml += formatShareLine(p, isTeams2);
+                    });
+                    colHtml += `</div>`;
                 });
                 colHtml += `</div>`;
                 columnsHtml += colHtml;
                 count++;
             });
+            if (!count) return "";
+            const titleHtml = `<div class="share-export-title">${escapeHtml(tag.imageLabel)}</div>`;
+            return `<div class="share-card-inner">${titleHtml}<div class="share-export-columns">${columnsHtml}</div></div>`;
+        }
 
-            if (count === 0) {
-                if (showAlertOnEmpty) alert("所選的日期中無任何隊伍可產生圖片！");
-                return false;
-            }
-
-            shareCard.innerHTML = `<div class="share-card-inner">${titleHtml}<div class="share-export-columns">${columnsHtml}</div></div>`;
-            try {
-                await new Promise(r => requestAnimationFrame(r));
-                const canvas = await html2canvas(shareCard.firstElementChild, { scale: 2, useCORS: true, backgroundColor: "#111111", logging: false });
-
-                // 如果使用者已經切換到新的日期選擇，忽略這次較晚完成的舊圖片。
-                if (generationToken !== imageGenerationToken) return false;
-
-                previewImages = [{ title: `${exportTitle ? exportTitle + " - " : ""}${isTeams2 ? '12人' : '6人'}全部隊伍 (${getWeekDisplayTitle(state.activeWeek)})`, dataUrl: canvas.toDataURL("image/png") }];
-            } catch(e) {
-                if (generationToken === imageGenerationToken) {
-                    alert("圖片產生失敗，請稍後再試！");
-                }
-                return false;
-            } finally {
-                if (generationToken === imageGenerationToken) {
+        async function generateSelectedTeamsImage(showAlertOnEmpty = true) {
+            const generationToken = ++imageGenerationToken;
+            if (typeof html2canvas === "undefined") return false;
+            const wData = currentWeekData();
+            const groupsArr = pendingImageGenIsTeams2 ? wData.groups2 : wData.groups;
+            const shareCard = document.getElementById("share-card");
+            const newImages = [];
+            for (const tag of SHARED_TAGS) {
+                const availableIndices = groupsArr.map((g, i) => ({g, i})).filter(x => (x.g.teams || []).some(t => t.tag === tag.key && (t.members || []).length > 0)).map(x => x.i);
+                if (!availableIndices.length) continue;
+                const markup = buildTagImageMarkup(tag, availableIndices, pendingImageGenIsTeams2, groupsArr);
+                if (!markup) continue;
+                shareCard.innerHTML = markup;
+                try {
+                    await new Promise(r => requestAnimationFrame(r));
+                    const canvas = await html2canvas(shareCard.firstElementChild, { scale: 2, useCORS: true, backgroundColor: "#111111", logging: false });
+                    if (generationToken !== imageGenerationToken) return false;
+                    newImages.push({ tagKey: tag.key, title: tag.imageLabel, dataUrl: canvas.toDataURL("image/png"), selectedIndices: [...availableIndices] });
+                } catch(e) {
+                    if (generationToken === imageGenerationToken) alert("圖片產生失敗，請稍後再試！");
+                    return false;
+                } finally {
                     shareCard.innerHTML = "";
                 }
             }
-
             if (generationToken !== imageGenerationToken) return false;
-
-            currentImageIndex = 0;
-            renderImageDayButtons();
+            if (!newImages.length) {
+                if (showAlertOnEmpty) alert("目前沒有已設定標籤且有成員的隊伍可產生圖片。");
+                return false;
+            }
+            previewImages = newImages;
+            renderImageCards();
             showModal();
             return true;
         }
 
+        async function regenerateTagImage(tagKey) {
+            const item = previewImages.find(x => x.tagKey === tagKey);
+            const tag = SHARED_TAGS.find(x => x.key === tagKey);
+            if (!item || !tag || typeof html2canvas === "undefined") return;
+            const token = ++imageGenerationToken;
+            const wData = currentWeekData();
+            const groupsArr = pendingImageGenIsTeams2 ? wData.groups2 : wData.groups;
+            const markup = buildTagImageMarkup(tag, item.selectedIndices, pendingImageGenIsTeams2, groupsArr);
+            if (!markup) {
+                item.dataUrl = "";
+            } else {
+                const shareCard = document.getElementById("share-card");
+                shareCard.innerHTML = markup;
+                try {
+                    await new Promise(r => requestAnimationFrame(r));
+                    const canvas = await html2canvas(shareCard.firstElementChild, { scale: 2, useCORS: true, backgroundColor: "#111111", logging: false });
+                    if (token !== imageGenerationToken) return;
+                    item.dataUrl = canvas.toDataURL("image/png");
+                } catch(e) { alert("圖片更新失敗，請稍後再試！"); }
+                finally { shareCard.innerHTML = ""; }
+            }
+            if (token === imageGenerationToken) renderImageCards();
+        }
+
+        function renderImageCards() {
+            const container = document.getElementById("image-list");
+            if (!container) return;
+            const wData = currentWeekData();
+            const groupsArr = pendingImageGenIsTeams2 ? wData.groups2 : wData.groups;
+            container.innerHTML = previewImages.map((item, idx) => {
+                const tag = SHARED_TAGS.find(t => t.key === item.tagKey);
+                const dateButtons = groupsArr.map((group, gIdx) => {
+                    const has = (group.teams || []).some(t => t.tag === item.tagKey && (t.members || []).length > 0);
+                    const selected = item.selectedIndices.includes(gIdx);
+                    return `<button type="button" onclick="toggleImageTagDay('${item.tagKey}',${gIdx})" ${has ? "" : "disabled"} class="rounded-lg border px-2.5 py-1.5 text-xs font-semibold ${selected ? "border-blue-600 bg-blue-600 text-white" : "border-slate-700 bg-slate-800 text-slate-300"} ${has ? "" : "cursor-not-allowed opacity-40"}">${GROUP_NAMES[gIdx]}${group.date ? ` (${escapeHtml(group.date)})` : ""}</button>`;
+                }).join("");
+                return `<section class="rounded-xl border border-slate-700 bg-slate-900 p-4">
+                    <h4 class="mb-3 text-base font-bold text-slate-100">${escapeHtml(item.title)}</h4>
+                    ${item.dataUrl ? `<div class="mb-3 flex justify-center rounded-lg bg-black/30 p-2"><img class="max-h-[48vh] max-w-full rounded object-contain" src="${item.dataUrl}" alt="${escapeHtml(item.title)}"></div>` : `<div class="mb-3 rounded-lg bg-slate-950 p-6 text-center text-sm text-slate-400">請至少選擇一個有此標籤的日期</div>`}
+                    <div class="mb-3 flex flex-wrap gap-2">${dateButtons}</div>
+                    <div class="flex justify-end gap-2">
+                        <button type="button" onclick="copyPreviewImage(${idx})" ${item.dataUrl ? "" : "disabled"} class="rounded-lg border border-blue-600 bg-blue-600/20 px-3 py-1.5 text-xs font-semibold text-blue-300 disabled:opacity-40">📋 複製圖片</button>
+                        <button type="button" onclick="downloadPreviewImage(${idx})" ${item.dataUrl ? "" : "disabled"} class="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40">💾 下載圖片</button>
+                    </div>
+                </section>`;
+            }).join("");
+        }
+
         function showModal() {
-            updateModalContent();
-            updateImageTitleTags();
+            document.getElementById("modal-title").innerText = `團隊圖片預覽（${previewImages.length} 張）`;
             document.getElementById("image-modal").classList.remove("hidden");
         }
 
-        // 圖片標籤採用「篩選標籤」樣式，點擊後立即重新產生圖片。
-        // 新增標籤時，只要在 Modal 的 image-title-tag 區塊新增一個 button 即可。
-        async function applyImageExportTitle(title) {
-            imageExportTitle = String(title || "").trim();
-            updateImageTitleTags();
-            await generateSelectedTeamsImage(false);
+        async function applyImageExportTitle(title) { /* 舊版相容：新版改為自動依隊伍標籤產生多張圖 */ }
+        function updateImageTitleTags() { /* 新版不再需要手動選擇單一圖片標籤 */ }
+
+        function closeModal() {
+            document.getElementById("image-modal").classList.add("hidden");
         }
 
-        function updateImageTitleTags() {
-            const container = document.getElementById('image-export-title');
-            if (!container) return;
-
-            const tags = [
-                { label: '不顯示', value: '' },
-                ...SHARED_TAGS.map(tag => ({ label: tag.imageLabel, value: tag.imageLabel }))
-            ];
-
-            container.innerHTML = tags.map(tag => {
-                const selected = String(tag.value) === String(imageExportTitle || '');
-                return `
-                    <button type="button" data-image-title="${escapeHtml(tag.value)}" onclick="applyImageExportTitle('${String(tag.value).replaceAll("'", "\\'")}')"
-                        class="image-title-tag rounded-full border px-3 py-1.5 text-xs font-bold transition ${selected ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-700 bg-slate-800 text-slate-300 hover:border-blue-500 hover:text-white'}">
-                        ${escapeHtml(tag.label)}
-                    </button>
-                `;
-            }).join('');
-        }
-
-        function closeModal() { 
-            document.getElementById("image-modal").classList.add("hidden"); 
-        }
-
-        function updateModalContent() {
-            const item = previewImages[currentImageIndex];
-            if (!item) return;
-            document.getElementById("modal-img").src = item.dataUrl;
-            document.getElementById("modal-title").innerText = `圖片預覽 - ${item.title}`;
-        }
-
-        async function copyModalImage() {
-            const btn = document.getElementById("btn-copy-img");
+        async function copyPreviewImage(index) {
+            const item = previewImages[index];
+            if (!item || !item.dataUrl) return;
             try {
-                const blob = await (await fetch(previewImages[currentImageIndex].dataUrl)).blob();
+                const blob = await (await fetch(item.dataUrl)).blob();
                 await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
-                btn.innerText = "✓ 已複製！";
-                setTimeout(() => btn.innerText = "📋 複製圖片", 1500);
-            } catch(e) { 
-                btn.innerText = "✕ 失敗"; 
-            }
+                alert(`已複製「${item.title}」圖片！`);
+            } catch(e) { alert("複製失敗，請確認瀏覽器允許剪貼簿權限。"); }
         }
 
-        function downloadModalImage() {
+        function downloadPreviewImage(index) {
+            const item = previewImages[index];
+            if (!item || !item.dataUrl) return;
             const link = document.createElement("a");
-            link.download = `Artale_${previewImages[currentImageIndex].title}.png`;
-            link.href = previewImages[currentImageIndex].dataUrl;
+            link.download = `Artale_${item.title.replace(/[\\/:*?"<>|]/g, "_")}.png`;
+            link.href = item.dataUrl;
             link.click();
         }
+
+        // 舊版函式保留，避免其他既有事件呼叫時出錯。
+        async function copyModalImage() { return copyPreviewImage(currentImageIndex); }
+        function downloadModalImage() { return downloadPreviewImage(currentImageIndex); }
 
         // ==========================================
         // 12. 主渲染進入點

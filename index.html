@@ -201,7 +201,6 @@
                     </div>
                     <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <button onclick="openImageGenModal(false)" class="rounded-lg border border-blue-900 bg-blue-950/50 px-4 py-3 text-sm font-bold text-blue-300 transition hover:bg-blue-900/50">🖼️ 產生全部團隊圖片</button>
-                        <button onclick="clearCurrentGroup(false)" class="rounded-lg border border-slate-800 bg-slate-800 px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-slate-700">🧹 清空當前團隊伍</button>
                     </div>
                     <div id="group-tabs" class="mt-4 flex flex-wrap gap-3"></div>
                 </div>
@@ -220,6 +219,10 @@
                 <div id="teams-cards-container" class="space-y-6"></div>
                 <div id="teams-pool-container"></div>
 
+                <!-- 危險操作移至頁面最底部，避免誤觸 -->
+                <div class="flex justify-end border-t border-slate-800/70 pt-4">
+                    <button onclick="clearCurrentGroup(false)" class="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 text-xs text-slate-500 transition hover:border-rose-900 hover:bg-rose-950/40 hover:text-rose-300">🧹 清空當前團隊伍</button>
+                </div>
             </div>
 
             <!-- 隊伍分配頁面 2 (12人，兩欄式緊湊版面) -->
@@ -230,7 +233,6 @@
                     </div>
                     <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <button onclick="openImageGenModal(true)" class="rounded-lg border border-blue-900 bg-blue-950/50 px-4 py-3 text-sm font-bold text-blue-300 transition hover:bg-blue-900/50">🖼️ 產生全部團隊圖片</button>
-                        <button onclick="clearCurrentGroup(true)" class="rounded-lg border border-slate-800 bg-slate-800 px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-slate-700">🧹 清空當前團隊伍</button>
                     </div>
                     <div id="group-tabs-2" class="mt-4 flex flex-wrap gap-3"></div>
                 </div>
@@ -249,6 +251,10 @@
                 <div id="teams-cards-container-2" class="space-y-6"></div>
                 <div id="teams-pool-container-2"></div>
 
+                <!-- 危險操作移至頁面最底部，避免誤觸 -->
+                <div class="flex justify-end border-t border-slate-800/70 pt-4">
+                    <button onclick="clearCurrentGroup(true)" class="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 text-xs text-slate-500 transition hover:border-rose-900 hover:bg-rose-950/40 hover:text-rose-300">🧹 清空當前團隊伍</button>
+                </div>
             </div>
         </main>
     </div>

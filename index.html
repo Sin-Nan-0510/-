@@ -265,6 +265,34 @@
     <!-- 圖片匯出暫存容器 -->
     <div id="share-card"></div>
 
+    <!-- 從總名單快速挑選成員 -->
+    <div id="roster-picker-modal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/75 backdrop-blur-sm p-3 md:p-6">
+        <div class="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-xl border border-slate-700 bg-slate-900 shadow-2xl">
+            <div class="flex items-center justify-between gap-3 border-b border-slate-700 px-5 py-4">
+                <div>
+                    <h3 id="roster-picker-title" class="text-lg font-bold text-slate-100">從總名單加入成員</h3>
+                    <p class="mt-1 text-xs text-slate-400">可用職業篩選或搜尋名字，按「＋加入」即可加入目前隊伍。</p>
+                </div>
+                <button onclick="closeRosterPicker()" class="rounded-lg px-3 py-2 text-slate-400 hover:bg-slate-800 hover:text-white">✕</button>
+            </div>
+            <div class="space-y-3 border-b border-slate-800 p-4">
+                <input id="roster-picker-search" type="search" oninput="updateRosterPickerQuery(this.value)" placeholder="搜尋玩家名稱、職業或等級…" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-500">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div id="roster-picker-jobs" class="flex flex-wrap gap-2"></div>
+                    <label class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-emerald-800 bg-emerald-950/40 px-3 py-2 text-xs font-semibold text-emerald-200">
+                        <input id="roster-picker-available-only" type="checkbox" onchange="toggleRosterPickerAvailableOnly(this.checked)" class="accent-emerald-500">
+                        <span id="roster-picker-available-label">只顯示當週有填時間</span>
+                    </label>
+                </div>
+            </div>
+            <div id="roster-picker-list" class="min-h-0 flex-1 overflow-auto p-3"></div>
+            <div class="flex items-center justify-between border-t border-slate-800 px-4 py-3">
+                <span id="roster-picker-count" class="text-xs text-slate-400"></span>
+                <button onclick="closeRosterPicker()" class="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-sm text-slate-200 hover:bg-slate-700">完成</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 圖片預覽 Modal -->
     <div id="image-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
         <div class="relative flex max-h-[90vh] w-full max-w-5xl flex-col rounded-xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
@@ -355,6 +383,7 @@
         // 6人／12人隊伍頁面的成員名單日期篩選：-1=全部，0~6=週二~週一
         let poolDayFilter = -1;
         let pendingImageGenIsTeams2 = false;
+        let rosterPicker = { open: false, teamIdx: 0, isTeams2: false, job: "全部職業", query: "", availableOnly: false };
 
         let state = {
             activeWeek: formatDateKey(getTuesdayOfWeek()),
@@ -1310,6 +1339,90 @@
             `;
         }
 
+        function openRosterPicker(teamIdx, isTeams2 = false) {
+            rosterPicker = { open: true, teamIdx, isTeams2, job: "全部職業", query: "", availableOnly: true };
+            const modal = document.getElementById("roster-picker-modal");
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+            document.getElementById("roster-picker-search").value = "";
+            const availableToggle = document.getElementById("roster-picker-available-only");
+            if (availableToggle) availableToggle.checked = true;
+            renderRosterPicker();
+            setTimeout(() => document.getElementById("roster-picker-search")?.focus(), 30);
+        }
+
+        function closeRosterPicker() {
+            const modal = document.getElementById("roster-picker-modal");
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+            rosterPicker.open = false;
+        }
+
+        function updateRosterPickerQuery(value) {
+            rosterPicker.query = String(value || "").trim().toLowerCase();
+            renderRosterPicker();
+        }
+
+        function setRosterPickerJob(job) {
+            rosterPicker.job = job;
+            renderRosterPicker();
+        }
+
+        function toggleRosterPickerAvailableOnly(checked) {
+            rosterPicker.availableOnly = !!checked;
+            renderRosterPicker();
+        }
+
+        function addRosterPlayerToTeam(playerId) {
+            const { teamIdx, isTeams2 } = rosterPicker;
+            sendToTeam(playerId, teamIdx, isTeams2);
+            // Keep the picker open so multiple players can be added in sequence.
+            setTimeout(() => { if (rosterPicker.open) renderRosterPicker(); }, 80);
+        }
+
+        function renderRosterPicker() {
+            const { teamIdx, isTeams2, job, query, availableOnly } = rosterPicker;
+            const team = (currentGroup(isTeams2).teams || [])[teamIdx];
+            const activeGroupIdx = isTeams2 ? state.activeGroup2 : state.activeGroup;
+            const dayName = GROUP_NAMES[activeGroupIdx] || "當天";
+            const availableLabel = document.getElementById("roster-picker-available-label");
+            if (availableLabel) availableLabel.textContent = `只顯示${dayName}有填時間`;
+
+            const title = document.getElementById("roster-picker-title");
+            if (title) title.textContent = `從總名單加入成員${team ? "－" + team.name : ""}`;
+            const jobs = ["全部職業", ...JOB_LIST];
+            const jobWrap = document.getElementById("roster-picker-jobs");
+            if (jobWrap) jobWrap.innerHTML = jobs.map(j => `<button onclick="setRosterPickerJob('${j}')" class="rounded-md border px-3 py-1.5 text-xs font-semibold transition ${job === j ? "border-blue-500 bg-blue-600 text-white" : "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700"}">${j}</button>`).join("");
+
+            const assigned = new Set((team?.members || []).map(p => String(p.id)));
+            const players = (state.pool || []).filter(p => {
+                if (job !== "全部職業" && p.job !== job) return false;
+                if (availableOnly) {
+                    const availability = getPlayerWeekAvailability(p, state.activeWeek);
+                    if (!String(availability[activeGroupIdx] || "").trim()) return false;
+                }
+                const haystack = [p.name, p.job, getPlayerLevel(p), p.position].join(" ").toLowerCase();
+                return !query || haystack.includes(query);
+            });
+            const list = document.getElementById("roster-picker-list");
+            const count = document.getElementById("roster-picker-count");
+            if (count) count.textContent = `符合 ${players.length} 人｜目前隊伍 ${team?.members?.length || 0} 人${availableOnly ? `｜僅顯示${dayName}有填時間` : ""}`;
+            if (!list) return;
+            if (!players.length) {
+                list.innerHTML = `<div class="p-10 text-center text-sm text-slate-500">沒有符合條件的玩家</div>`;
+                return;
+            }
+            list.innerHTML = `<div class="overflow-x-auto"><table class="w-full min-w-[650px] text-left text-sm"><thead class="sticky top-0 bg-slate-800 text-xs text-slate-300"><tr><th class="p-3">等級</th><th class="p-3">職業</th><th class="p-3">名稱</th><th class="p-3">當週時間</th><th class="p-3">AD/AP</th><th class="p-3">場次</th><th class="p-3">標籤</th><th class="p-3 text-right">操作</th></tr></thead><tbody>${players.map(p => {
+                const tags = SHARED_TAGS.filter(t => p[t.key]).map(t => t.filterLabel);
+                if (p.treeKing && !tags.includes("樹王")) tags.push("樹王");
+                if (p.dragonKing && !tags.includes("龍王")) tags.push("龍王");
+                const already = assigned.has(String(p.id));
+                const playerAvailability = getPlayerWeekAvailability(p, state.activeWeek);
+                const playerDayTime = String(playerAvailability[activeGroupIdx] || "").trim();
+                return `<tr class="border-b border-slate-800 hover:bg-slate-800/60"><td class="p-3 text-slate-300">${escapeHtml(getPlayerLevel(p) || "—")}</td><td class="p-3"><span class="rounded border px-2 py-1 text-xs ${getJobColorClass(p.job)}">${escapeHtml(p.job || "未設定")}</span></td><td class="p-3 font-semibold text-slate-100"><span class="inline-block w-[5em] max-w-[5em] truncate align-bottom" title="${escapeHtml(p.name || "未命名")}">${escapeHtml(p.name || "未命名")}</span></td><td class="p-3 whitespace-nowrap text-emerald-300">${escapeHtml(playerDayTime || "—")}</td><td class="p-3 text-slate-300">${escapeHtml(p.position || "—")}</td><td class="p-3 text-amber-300">${escapeHtml(p.rounds || "7")}場</td><td class="p-3 text-xs text-slate-400">${escapeHtml(tags.join("、") || "—")}</td><td class="p-3 text-right">${already ? `<span class="text-xs text-slate-500">已在此隊</span>` : `<button onclick="addRosterPlayerToTeam('${String(p.id).replaceAll("'", "\\'")}')" class="rounded-md border border-emerald-700 bg-emerald-950/60 px-3 py-1.5 text-xs font-bold text-emerald-300 hover:bg-emerald-900">＋ 加入</button>`}</td></tr>`;
+            }).join("")}</tbody></table></div>`;
+        }
+
         function renderTeamsContainer(isTeams2 = false) {
             let html = "";
             const currentTeams = currentGroup(isTeams2).teams || [];
@@ -1344,6 +1457,7 @@
                                 <span class="text-lg">⚔️</span>
                                 <input type="text" value="${escapeHtml(team.name)}" onchange="updateTeamName(${tIdx}, this.value, ${isTeams2})" class="w-24 rounded border border-slate-700 bg-slate-950 px-2 py-1 text-base font-bold text-blue-300">
                                 <input type="text" value="${escapeHtml(team.time || "20:00")}" maxlength="5" onchange="updateTeamTime(${tIdx}, this.value, ${isTeams2})" class="w-16 rounded border border-slate-800 bg-slate-900 px-1 py-0.5 text-center text-xs text-blue-400 font-bold">
+                                <button onclick="openRosterPicker(${tIdx}, ${isTeams2})" class="rounded-lg border border-emerald-700 bg-emerald-950/60 px-3 py-1.5 text-xs font-bold text-emerald-300 hover:bg-emerald-900/70 transition">＋ 從名單加入</button>
                                 <div class="flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-950/70 p-1">
                                     <label class="flex items-center gap-1 px-2 py-1 rounded-md cursor-pointer text-xs ${!team.con ? 'bg-blue-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800'}">
                                         <input type="radio" name="team-rounds-${isTeams2 ? '2_' : ''}${tIdx}" ${!team.con ? "checked" : ""} onchange="updateTeamCon(${tIdx}, false, ${isTeams2})"> 連7場

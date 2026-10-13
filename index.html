@@ -1400,7 +1400,7 @@
             if (jobWrap) jobWrap.innerHTML = jobs.map(j => `<button onclick="setRosterPickerJob('${j}')" class="rounded-md border px-3 py-1.5 text-xs font-semibold transition ${job === j ? "border-blue-500 bg-blue-600 text-white" : "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700"}">${j}</button>`).join("");
             const tagWrap = document.getElementById("roster-picker-tags");
             const pickerTags = ["全部標籤", ...SHARED_TAGS.map(t => t.key === "treeKing" ? "樹王" : t.key === "dragonKing" ? "龍王" : t.filterLabel)];
-            if (tagWrap) tagWrap.innerHTML = `<span class="self-center text-xs text-slate-400">標籤篩選：</span>` + pickerTags.map(label => `<button onclick="setRosterPickerTag('${label}')" class="rounded-md border px-3 py-1.5 text-xs font-semibold transition ${tag === label ? "border-violet-500 bg-violet-600 text-white" : "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700"}">${escapeHtml(label)}</button>`).join("");
+            if (tagWrap) tagWrap.innerHTML =  pickerTags.map(label => `<button onclick="setRosterPickerTag('${label}')" class="rounded-md border px-3 py-1.5 text-xs font-semibold transition ${tag === label ? "border-violet-500 bg-violet-600 text-white" : "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700"}">${escapeHtml(label)}</button>`).join("");
 
             const assigned = new Set((team?.members || []).map(p => String(p.id)));
             const weekData = state.weeksData?.[state.activeWeek] || {};

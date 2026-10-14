@@ -150,6 +150,10 @@
             font-size: 14px;
             flex-shrink: 0;
         }
+
+
+
+
     </style>
 </head>
 
@@ -374,6 +378,8 @@
         let database = null;
         let firebaseEnabled = false;
         let sortableInstances = [];
+        let renderScheduled = false;
+        let rosterPickerQueryTimer = null;
         let currentTab = "teams";
         let previewImages = [];
         let currentImageIndex = 0;
@@ -639,10 +645,10 @@
         async function transactionUpdate(mutator) {
             if (!firebaseEnabled) {
                 const local = normalizeFirebaseData(state);
-                if (mutator(local) !== false) { 
-                    applyFirebaseDataToLocal(local); 
-                    saveLocalState(); 
-                    render(); 
+                if (mutator(local) !== false) {
+                    applyFirebaseDataToLocal(local);
+                    saveLocalState();
+                    render();
                 }
                 return;
             }
@@ -652,12 +658,29 @@
                     const latest = normalizeFirebaseData(cur);
                     return mutator(latest) === false ? cur : latest;
                 });
-                if (res?.snapshot) { 
-                    applyFirebaseDataToLocal(res.snapshot.val()); 
-                    render(); 
+                if (res?.snapshot) {
+                    applyFirebaseDataToLocal(res.snapshot.val());
+                    saveLocalState();
+                    render();
                 }
-            } catch(err) { 
-                alert("資料同步失敗"); 
+            } catch(err) {
+                // 雲端交易失敗時，將本次變更套用到本機狀態並快取，避免輸入內容直接遺失。
+                try {
+                    const fallback = normalizeFirebaseData(state);
+                    if (mutator(fallback) !== false) {
+                        applyFirebaseDataToLocal(fallback);
+                        saveLocalState();
+                        render();
+                    } else {
+                        saveLocalState();
+                    }
+                } catch(localErr) {
+                    saveLocalState();
+                    console.error("Local fallback failed:", localErr);
+                }
+                setSyncStatus("⚠ 雲端同步失敗，已保留本機資料", "text-[11px] text-amber-500");
+                console.error("Firebase transaction failed:", err);
+                alert("資料同步失敗；本次變更已盡可能保留在本機，請確認連線與 Firebase 權限。 ");
             }
         }
 
@@ -683,9 +706,13 @@
                 setSyncStatus(isConn ? "☁ 已連線到 Firebase" : "☁ Firebase 連線中...", isConn ? "text-[11px] text-emerald-400" : "text-[11px] text-amber-400");
             });
 
-            database.ref(FIREBASE_PATH).on("value", snap => { 
-                applyFirebaseDataToLocal(snap.val()); 
-                render(); 
+            database.ref(FIREBASE_PATH).on("value", snap => {
+                applyFirebaseDataToLocal(snap.val());
+                saveLocalState();
+                render();
+            }, error => {
+                setSyncStatus("⚠ 無法讀取雲端資料，請檢查 Firebase 權限", "text-[11px] text-amber-500");
+                console.error("Firebase listener failed:", error);
             });
             
             database.ref(FIREBASE_PATH).transaction(cur => cur === null ? createEmptyFirebaseData() : cur);
@@ -1005,11 +1032,20 @@
         }
 
         function updateTeamTag(tIdx, tagKey, isTeams2 = false) {
+            // 固定操作當下的目標，避免 Firebase transaction 重試期間切換週別／隊伍，
+            // 導致標籤寫入另一隊或因目標索引變動而沒有更新。
+            const targetWeek = state.activeWeek;
+            const targetGroup = isTeams2 ? state.activeGroup2 : state.activeGroup;
+            const targetGroupsKey = isTeams2 ? "groups2" : "groups";
+            const normalizedTag = SHARED_TAGS.some(tag => tag.key === tagKey) ? tagKey : "";
+
             transactionUpdate(data => {
-                const wData = data.weeksData[state.activeWeek];
-                const groupsArr = isTeams2 ? wData.groups2 : wData.groups;
-                const team = groupsArr[isTeams2 ? state.activeGroup2 : state.activeGroup].teams[tIdx];
-                if (team) team.tag = SHARED_TAGS.some(tag => tag.key === tagKey) ? tagKey : "";
+                const wData = data.weeksData && data.weeksData[targetWeek];
+                const groupsArr = wData && wData[targetGroupsKey];
+                const group = groupsArr && groupsArr[targetGroup];
+                const team = group && Array.isArray(group.teams) ? group.teams[tIdx] : null;
+                if (!team) return false;
+                team.tag = normalizedTag;
                 return true;
             });
         }
@@ -1360,7 +1396,11 @@
 
         function updateRosterPickerQuery(value) {
             rosterPicker.query = String(value || "").trim().toLowerCase();
-            renderRosterPicker();
+            if (rosterPickerQueryTimer) clearTimeout(rosterPickerQueryTimer);
+            rosterPickerQueryTimer = setTimeout(() => {
+                rosterPickerQueryTimer = null;
+                if (rosterPicker.open) renderRosterPicker();
+            }, 90);
         }
 
         function setRosterPickerJob(job) {
@@ -1950,6 +1990,15 @@
         // 根據目前分頁、週別與隊伍資料更新整個畫面。
         // ==========================================
         function render() {
+            if (renderScheduled) return;
+            renderScheduled = true;
+            requestAnimationFrame(() => {
+                renderScheduled = false;
+                renderNow();
+            });
+        }
+
+        function renderNow() {
             const weekKeys = getAvailableWeekKeys();
             document.getElementById("week-select").innerHTML = weekKeys.map(wk => `<option value="${wk}" ${wk === state.activeWeek ? "selected" : ""}>${getWeekDisplayTitle(wk)}</option>`).join("");
             

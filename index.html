@@ -370,7 +370,7 @@
             { key: "hardLotus", filterLabel: "困拉", imageLabel: "『困難拉圖斯』", activeClass: "bg-pink-600 border-pink-500 text-white", playerClass: "bg-pink-950 border-pink-600 text-pink-300" },
             { key: "poisonButterfly", filterLabel: "毒蝴蝶", imageLabel: "艾畢奈亞『毒蝴蝶』", activeClass: "bg-violet-600 border-violet-500 text-white", playerClass: "bg-violet-950 border-violet-600 text-violet-300" },
             //{ key: "iceButterfly", filterLabel: "冰蝴蝶", imageLabel: "艾畢奈亞『冰蝴蝶』", activeClass: "bg-cyan-600 border-cyan-500 text-white", playerClass: "bg-cyan-950 border-cyan-600 text-cyan-300" },
-            //{ key: "arkaYinong", filterLabel: "阿卡伊農", imageLabel: "『阿卡伊農』", activeClass: "bg-sky-300 border-sky-400 text-sky-950", playerClass: "bg-sky-100 border-sky-300 text-sky-800" },
+            { key: "arkaYinong", filterLabel: "阿卡伊農", imageLabel: "『阿卡伊農』", activeClass: "bg-sky-300 border-sky-400 text-sky-950", playerClass: "bg-sky-100 border-sky-300 text-sky-800" },
 
         ];
 
@@ -1034,12 +1034,50 @@
             });
         }
 
+        function getWeekKeyOffset(weekKey, offsetWeeks) {
+            const parts = String(weekKey || formatDateKey(getTuesdayOfWeek())).split('-').map(Number);
+            const date = parts[0] ? new Date(parts[0], parts[1] - 1, parts[2]) : getTuesdayOfWeek();
+            date.setDate(date.getDate() + Number(offsetWeeks || 0) * 7);
+            return formatDateKey(date);
+        }
+
+        // 判斷某週是否真的有可切換查看的內容，而不只是一筆空白預設週資料。
+        // 任一 6人／12人隊伍有成員、隊伍有自訂設定，或總名單填過該週出席時間，都算有資料。
+        function hasWeekData(weekKey) {
+            const key = String(weekKey || '');
+            if (!key || (state.deletedWeeks || []).map(String).includes(key)) return false;
+            const week = state.weeksData && state.weeksData[key];
+            if (!week) return false;
+
+            const groupsHaveData = (groups, isTeams2) => (groups || []).some((group, gIdx) => {
+                const baseParts = key.split('-').map(Number);
+                const baseDate = baseParts[0] ? new Date(baseParts[0], baseParts[1] - 1, baseParts[2]) : getTuesdayOfWeek();
+                baseDate.setDate(baseDate.getDate() + gIdx);
+                const defaultDate = `${baseDate.getMonth() + 1}/${baseDate.getDate()}`;
+                if (String(group.date || '') !== defaultDate) return true;
+                return (group.teams || []).some((team, tIdx) => {
+                    if ((team.members || []).length > 0) return true;
+                    if (String(team.tag || '').trim()) return true;
+                    if (String(team.name || `第${tIdx + 1}隊`) !== `第${tIdx + 1}隊`) return true;
+                    if (String(team.time || '20:00') !== '20:00') return true;
+                    // 不以連場選項單獨判定，避免舊資料缺少 groups2 時把複製的預設值誤認成有資料。
+                    return false;
+                });
+            });
+
+            if (groupsHaveData(week.groups, false) || groupsHaveData(week.groups2, true)) return true;
+
+            return (state.pool || []).some(player =>
+                getPlayerWeekAvailability(player, key).some(value => String(value || '').trim() !== '')
+            );
+        }
+
         function getAvailableWeekKeys() {
             const deleted = new Set((state.deletedWeeks || []).map(String));
             const set = new Set(Object.keys(state.weeksData || {}).filter(wk => !deleted.has(String(wk))));
             const base = getTuesdayOfWeek();
-            // 保留原本可快速選擇上週、本週與未來兩週的能力；被刪除的週不會出現在選單。
-            for (let i = -1; i <= 2; i++) {
+            // 只提供本週與未來兩週的快速建立入口，不再自動加入不存在的「上週」。
+            for (let i = 0; i <= 2; i++) {
                 const d = new Date(base);
                 d.setDate(d.getDate() + i * 7);
                 const key = formatDateKey(d);
@@ -1053,10 +1091,15 @@
             wk = String(wk);
             if ((state.deletedWeeks || []).map(String).includes(wk)) return;
 
+            // 若選擇的是歷史週，必須已有資料；避免下拉選單把不存在的舊週建立成空白週。
+            if (!state.weeksData?.[wk] && wk < formatDateKey(getTuesdayOfWeek())) return;
+
             transactionUpdate(data => {
                 const deleted = new Set((data.deletedWeeks || []).map(String));
                 if (deleted.has(wk)) return false;
                 data.deletedWeeks = Array.isArray(data.deletedWeeks) ? data.deletedWeeks.map(String) : [];
+                // 週別只在使用者明確選到本週／未來週時才允許建立；歷史週不得憑空建立。
+                if (!data.weeksData[wk] && wk < formatDateKey(getTuesdayOfWeek())) return false;
                 data.activeWeek = wk;
                 if (!data.weeksData[wk]) {
                     data.weeksData[wk] = {
@@ -1070,20 +1113,25 @@
 
         function switchWeekRelative(delta) {
             if (!delta) return;
-            const parts = String(state.activeWeek || formatDateKey(getTuesdayOfWeek())).split('-').map(Number);
-            const t = parts[0] ? new Date(parts[0], parts[1] - 1, parts[2]) : getTuesdayOfWeek();
             const step = delta > 0 ? 1 : -1;
+            const currentKey = String(state.activeWeek || formatDateKey(getTuesdayOfWeek()));
             const deleted = new Set((state.deletedWeeks || []).map(String));
-            let targetKey = '';
 
-            // 可以持續往前／往後切週；只跳過明確被刪除的週別。
-            for (let guard = 0; guard < 5200; guard++) {
-                t.setDate(t.getDate() + step * 7);
-                targetKey = formatDateKey(t);
-                if (!deleted.has(targetKey)) break;
-                targetKey = '';
+            if (step < 0) {
+                // 上一週只允許前一個日曆週確實有內容；沒有資料或已刪除時按鈕會停用。
+                const previousKey = getWeekKeyOffset(currentKey, -1);
+                if (deleted.has(previousKey) || !hasWeekData(previousKey)) return;
+                selectWeek(previousKey);
+                return;
             }
-            if (targetKey) selectWeek(targetKey);
+
+            // 下一週維持原本可往未來建立週別的行為，並跳過明確刪除的週。
+            let nextKey = '';
+            for (let offset = 1; offset <= 5200; offset++) {
+                const candidate = getWeekKeyOffset(currentKey, offset);
+                if (!deleted.has(candidate)) { nextKey = candidate; break; }
+            }
+            if (nextKey) selectWeek(nextKey);
         }
 
         function jumpToCurrentWeek() {
@@ -2284,8 +2332,20 @@
 
         function renderNow() {
             const weekKeys = getAvailableWeekKeys();
-            document.getElementById("week-select").innerHTML = weekKeys.map(wk => `<option value="${wk}" ${wk === state.activeWeek ? "selected" : ""}>${getWeekDisplayTitle(wk)}</option>`).join("");
-            
+            const weekSelect = document.getElementById("week-select");
+            weekSelect.innerHTML = weekKeys.map(wk => `<option value="${wk}" ${wk === state.activeWeek ? "selected" : ""}>${getWeekDisplayTitle(wk)}</option>`).join("");
+
+            // 前一個日曆週沒有實際內容（或已被刪除）時，停用「上一週」。
+            const previousWeekButton = document.querySelector('button[onclick="switchWeekRelative(-1)"]');
+            const previousWeekKey = getWeekKeyOffset(state.activeWeek, -1);
+            const canGoPreviousWeek = hasWeekData(previousWeekKey);
+            if (previousWeekButton) {
+                previousWeekButton.disabled = !canGoPreviousWeek;
+                previousWeekButton.title = canGoPreviousWeek ? "切換到有資料的上一週" : "上一週沒有資料，無法切換";
+                previousWeekButton.classList.toggle("opacity-40", !canGoPreviousWeek);
+                previousWeekButton.classList.toggle("cursor-not-allowed", !canGoPreviousWeek);
+            }
+
             const wData = currentWeekData();
             
             let totalM = 0; 

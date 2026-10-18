@@ -565,7 +565,9 @@
                 dragonKing: Boolean(player.dragonKing), 
                 ...Object.fromEntries(SHARED_TAGS.map(tag => [tag.key, Boolean(player[tag.key])])),
                 availability: normalizePlayerAvailability(player.availability, wk),
-                note: String(player.note || player["備註"] || "").trim()
+                note: String(player.note || player["備註"] || "").trim(),
+                // 12人隊伍專用的「位置」欄位，與總名單「備註」完全分離。
+                teamPosition: String(player.teamPosition || "").trim()
             };
         }
 
@@ -1429,6 +1431,18 @@
             });
         }
 
+        // 12人隊伍專用：位置獨立儲存，不寫入總名單的 note（備註）。
+        function updateTeamMemberPosition(tIdx, mIdx, val) {
+            transactionUpdate(data => {
+                const wData = data.weeksData[state.activeWeek];
+                const targetMember = wData.groups2[state.activeGroup2]?.teams?.[tIdx]?.members?.[mIdx];
+                if (targetMember) {
+                    targetMember.teamPosition = String(val || "");
+                }
+                return true;
+            });
+        }
+
         function updatePlayerTag(id, tagField, checked) {
             transactionUpdate(data => {
                 const p = data.pool.find(item => String(item.id) === String(id));
@@ -1603,7 +1617,10 @@
                 }
 
                 const newMember = { ...p };
-                if (isTeams2) newMember.note = "";
+                if (isTeams2) {
+                    // 12人隊伍的「位置」是隊伍內獨立欄位，不得帶入總名單備註。
+                    newMember.teamPosition = "";
+                }
 
                 targetTeam.members.push(newMember);
                 return true;
@@ -1757,7 +1774,7 @@
                         
                         <input type="text" value="${escapeHtml(player.name)}" onchange="updatePlayerField('${player.id}', 'name', this.value)" class="w-28 rounded border border-slate-800 bg-slate-900 px-2 py-1 text-xs text-slate-200 font-bold" placeholder="名字">
                         
-                        <input type="text" value="${escapeHtml(player.note || '')}" placeholder="位置" onchange="updateTeamMemberNote(${tIdx}, ${idx}, this.value, true)" class="w-40 rounded border border-slate-800 bg-slate-900 px-2 py-1 text-xs text-yellow-300 placeholder-slate-600 font-medium">
+                        <input type="text" value="${escapeHtml(player.teamPosition || '')}" placeholder="位置" onchange="updateTeamMemberPosition(${tIdx}, ${idx}, this.value)" class="w-40 rounded border border-slate-800 bg-slate-900 px-2 py-1 text-xs text-yellow-300 placeholder-slate-600 font-medium">
                     </div>
                     <button onclick="removeFromTeam(${tIdx}, ${idx}, true)" class="rounded bg-slate-900 border border-slate-800 px-2 py-1 text-xs text-rose-400 hover:bg-rose-950 transition ml-2">✕</button>
                 </div>
@@ -2173,7 +2190,10 @@
                                 }
 
                                 const newMember = { ...p };
-                                if (isT2) newMember.note = "";
+                                if (isT2) {
+                                    // 從總名單拖進12人隊伍時，位置欄位一律從空白開始。
+                                    newMember.teamPosition = "";
+                                }
                                 targetTeam.members.splice(newIndex, 0, newMember);
                                 return true;
                             }
@@ -2241,7 +2261,8 @@
 
             let lastColText = "";
             if (isTeams2) {
-                lastColText = player.note || "";
+                // 12人隊伍圖片只取隊伍自己的「位置」，不再使用總名單備註。
+                lastColText = player.teamPosition || "";
             } else {
                 if (player.part === "first") lastColText = "前7場";
                 else if (player.part === "second") lastColText = "後7場";

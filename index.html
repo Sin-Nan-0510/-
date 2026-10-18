@@ -186,10 +186,10 @@
                 <span>📋</span> 總名單 <span id="master-tab-badge" class="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-300">0人</span>
             </button>
             <button id="tab-btn-teams" onclick="switchTab('teams')" class="flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold transition-all duration-200">
-                <span>⚔️</span> 6人隊伍分配 <span id="teams-tab-badge" class="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-300">0/18</span>
+                <span>⚔️</span> 6人隊伍分配 <span id="teams-tab-badge" class="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-300">0人</span>
             </button>
             <button id="tab-btn-teams2" onclick="switchTab('teams2')" class="flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold transition-all duration-200">
-                <span>⚔</span> 12人隊伍分配 <span id="teams2-tab-badge" class="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-300">0/18</span>
+                <span>⚔</span> 12人隊伍分配 <span id="teams2-tab-badge" class="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-300">0人</span>
             </button>
         </div>
 
@@ -364,7 +364,7 @@
         // activeClass：標籤被選取時的顏色
         // ========================================== 
         const SHARED_TAGS = [
-            { key: "fireDemon", filterLabel: "炎魔", imageLabel: "殘暴炎魔", activeClass: "bg-orange-500 border-orange-400 text-white", playerClass: "bg-orange-950 border-orange-600 text-orange-300" },
+            { key: "fireDemon", filterLabel: "炎魔", imageLabel: "『殘暴炎魔』", activeClass: "bg-orange-500 border-orange-400 text-white", playerClass: "bg-orange-950 border-orange-600 text-orange-300" },
             { key: "treeKing", filterLabel: "樹王", imageLabel: "克雷塞爾『樹王』", activeClass: "bg-emerald-600 border-emerald-500 text-white", playerClass: "bg-emerald-950 border-emerald-600 text-emerald-300" },
             { key: "dragonKing", filterLabel: "龍王", imageLabel: "闇黑龍王『龍王』", activeClass: "bg-gray-600 border-gray-400 text-white", playerClass: "bg-gray-700 border-gray-500 text-gray-100" },
             { key: "hardLotus", filterLabel: "困拉", imageLabel: "『困難拉圖斯』", activeClass: "bg-pink-600 border-pink-500 text-white", playerClass: "bg-pink-950 border-pink-600 text-pink-300" },
@@ -818,12 +818,58 @@
             );
         }
 
+        // 龍王例外：只要玩家已經排進任一龍王隊伍，就從可安排名單隱藏。
+        function isPlayerAssignedToDragonKing(playerId, weekData) {
+            if (!weekData?.groups2) return false;
+
+            return weekData.groups2.some(group =>
+                (group.teams || []).some(team =>
+                    String(team.tag || '') === 'dragonKing' &&
+                    (team.members || []).some(member => String(member.id) === String(playerId))
+                )
+            );
+        }
+
         function hasReachedWeeklyLimit(player, weekData) {
             const rounds = String(player.rounds || "7");
             const assignedCount = getPlayerWeeklyTeamCount(player.id, weekData);
             if (rounds === "14" && assignedCount >= 2) return true;
             if (rounds === "7" && assignedCount >= 1) return true;
             return false;
+        }
+
+        // 依「成員場次」與「目標隊伍」判斷是否可以加入。
+        // 一般隊伍：連7場 = 1、連14場 = 2。
+        // 龍王例外：不論隊伍設定連7或連14，7場／14場成員都可以加入；
+        // 一旦排進龍王，該成員本週的可安排額度一次用完，之後從名單隱藏。
+        function getTeamAssignmentCost(team, player = null) {
+            if (!team) return 1;
+            if (String(team.tag || "") === "dragonKing" && player) {
+                return String(player.rounds || "7") === "14" ? 2 : 1;
+            }
+            return team.con ? 2 : 1;
+        }
+
+        function canPlayerBeAddedToTeam(player, team, weekData, sourceTeam = null) {
+            if (!player || !team || !weekData) return false;
+
+            const rounds = String(player.rounds || "7");
+            const limit = rounds === "14" ? 2 : 1;
+            const isDragonKing = String(team.tag || "") === "dragonKing";
+
+            // 龍王：同一玩家排進去後不可再安排第二次。
+            if (isDragonKing && isPlayerAssignedToDragonKing(player.id, weekData) && String(sourceTeam?.tag || "") !== "dragonKing") return false;
+
+            const cost = getTeamAssignmentCost(team, player);
+
+            let assignedCount = getPlayerWeeklyTeamCount(player.id, weekData);
+
+            // 拖曳「隊伍 → 隊伍」時，先扣掉原本來源隊伍占用的場次。
+            if (sourceTeam) {
+                assignedCount = Math.max(0, assignedCount - getTeamAssignmentCost(sourceTeam, player));
+            }
+
+            return assignedCount + cost <= limit;
         }
 
         function sortPoolBy(field) {
@@ -1091,15 +1137,24 @@
             wk = String(wk);
             if ((state.deletedWeeks || []).map(String).includes(wk)) return;
 
-            // 若選擇的是歷史週，必須已有資料；避免下拉選單把不存在的舊週建立成空白週。
+            // 歷史週如果不存在，禁止憑空建立。
             if (!state.weeksData?.[wk] && wk < formatDateKey(getTuesdayOfWeek())) return;
 
+            // 已存在的週別只切換本機 UI 狀態，不因「換週」本身寫入 Firebase。
+            if (state.weeksData?.[wk]) {
+                state.activeWeek = wk;
+                saveLocalState();
+                render();
+                return;
+            }
+
+            // 只有本週／未來週尚未存在時，才建立新的週資料並同步。
             transactionUpdate(data => {
                 const deleted = new Set((data.deletedWeeks || []).map(String));
                 if (deleted.has(wk)) return false;
                 data.deletedWeeks = Array.isArray(data.deletedWeeks) ? data.deletedWeeks.map(String) : [];
-                // 週別只在使用者明確選到本週／未來週時才允許建立；歷史週不得憑空建立。
                 if (!data.weeksData[wk] && wk < formatDateKey(getTuesdayOfWeek())) return false;
+
                 data.activeWeek = wk;
                 if (!data.weeksData[wk]) {
                     data.weeksData[wk] = {
@@ -1223,8 +1278,20 @@
             transactionUpdate(data => {
                 const wData = data.weeksData[state.activeWeek];
                 const groupsArr = isTeams2 ? wData.groups2 : wData.groups;
-                const g = groupsArr[isTeams2 ? state.activeGroup2 : state.activeGroup];
-                g.teams.push({ name: `第${g.teams.length + 1}隊`, emoji: "⚔️", time: "20:00", con: !isTeams2, members: [] });
+                const groupIdx = isTeams2 ? state.activeGroup2 : state.activeGroup;
+                const g = groupsArr?.[groupIdx];
+                if (!g) {
+                    alert("找不到目前隊伍分組，沒有新增任何資料。");
+                    return false;
+                }
+                if (!Array.isArray(g.teams)) g.teams = [];
+                g.teams.push({
+                    name: `第${g.teams.length + 1}隊`,
+                    emoji: "⚔️",
+                    time: "20:00",
+                    con: !isTeams2,
+                    members: []
+                });
                 return true;
             });
         }
@@ -1233,7 +1300,12 @@
             transactionUpdate(data => {
                 const wData = data.weeksData[state.activeWeek];
                 const groupsArr = isTeams2 ? wData.groups2 : wData.groups;
-                const g = groupsArr[isTeams2 ? state.activeGroup2 : state.activeGroup];
+                const groupIdx = isTeams2 ? state.activeGroup2 : state.activeGroup;
+                const g = groupsArr?.[groupIdx];
+                if (!g || !Array.isArray(g.teams)) {
+                    alert("找不到目前隊伍分組，沒有刪除任何資料。");
+                    return false;
+                }
                 if (g.teams.length === 0) {
                     alert("目前已經沒有隊伍！");
                     return false;
@@ -1443,7 +1515,17 @@
             const tagsBlank = !p.treeKing && !p.dragonKing;
             const defaultRounds = String(p.rounds || "7") === "7";
 
-            return textFieldsBlank && availabilityBlank && tagsBlank && defaultRounds;
+            // 額外安全條件：只要這個成員已經出現在任何週的任何隊伍，就不視為可清除空白。
+            const assignedSomewhere = Object.values(state.weeksData || {}).some(week => {
+                const groupsHavePlayer = groups => (groups || []).some(g =>
+                    (g.teams || []).some(t =>
+                        (t.members || []).some(m => String(m.id) === String(p.id))
+                    )
+                );
+                return groupsHavePlayer(week?.groups) || groupsHavePlayer(week?.groups2);
+            });
+
+            return textFieldsBlank && availabilityBlank && tagsBlank && defaultRounds && !assignedSomewhere;
         }
 
         function clearBlankPoolPlayers() {
@@ -1505,27 +1587,26 @@
                 const p = data.pool.find(item => String(item.id) === String(id));
                 const wData = data.weeksData[state.activeWeek];
                 const groupsArr = isTeams2 ? wData.groups2 : wData.groups;
-                const targetTeam = groupsArr[isTeams2 ? state.activeGroup2 : state.activeGroup].teams[tIdx];
-                
-                // 12 人隊伍：同一玩家本週只能存在於 12 人隊伍中的一個安排。
-                if (isTeams2 && isPlayerAssignedTo12Team(id, wData)) {
-                    alert("此玩家已排入本週 12 人隊伍，請先從原隊伍移除後再重新安排！");
+                const targetGroup = groupsArr?.[isTeams2 ? state.activeGroup2 : state.activeGroup];
+                const targetTeam = targetGroup?.teams?.[tIdx];
+                if (!p || !targetTeam) return false;
+
+                if (targetTeam.members.some(m => String(m.id) === String(id))) return false;
+
+                if (!canPlayerBeAddedToTeam(p, targetTeam, wData)) {
+                    if (String(targetTeam.tag || "") === "dragonKing") {
+                        alert("龍王例外：7／14 場成員都可以加入，排上後本週不再顯示於可安排名單。");
+                    } else {
+                        alert("此玩家的 7／14 場額度不足以加入這個隊伍。");
+                    }
                     return false;
                 }
 
-                if (hasReachedWeeklyLimit(p, wData)) {
-                    alert("此玩家本週已達出賽上限！");
-                    return false;
-                }
-                if (targetTeam.members.some(m => String(m.id) === String(id))) return false;
-                
                 const newMember = { ...p };
-                if (isTeams2) {
-                    newMember.note = "";
-                }
+                if (isTeams2) newMember.note = "";
 
                 targetTeam.members.push(newMember);
-                return true; 
+                return true;
             });
         }
 
@@ -1753,8 +1834,12 @@
             const assigned = new Set((team?.members || []).map(p => String(p.id)));
             const weekData = state.weeksData?.[state.activeWeek] || {};
             const players = (state.pool || []).filter(p => {
-                // 本週已達出賽場次上限的玩家，不顯示在可加入名單中。
-                if (hasReachedWeeklyLimit(p, weekData)) return false;
+                // 龍王隊伍也顯示 7 場成員；可加入名單只先排除已用完本週額度的人。
+                // 實際加入時仍由 canPlayerBeAddedToTeam() 做最後場次檢查。
+                const rounds = String(p.rounds || "7");
+                const weeklyLimit = rounds === "14" ? 2 : 1;
+                if (getPlayerWeeklyTeamCount(p.id, weekData) >= weeklyLimit) return false;
+                if (isTeams2 && isPlayerAssignedToDragonKing(p.id, weekData)) return false;
                 if (job !== "全部職業" && p.job !== job) return false;
                 if (tag !== "全部標籤") {
                     const selectedTag = SHARED_TAGS.find(t => t.filterLabel === tag || (t.key === "treeKing" && tag === "樹王") || (t.key === "dragonKing" && tag === "龍王"));
@@ -1770,7 +1855,12 @@
             });
             const list = document.getElementById("roster-picker-list");
             const count = document.getElementById("roster-picker-count");
-            if (count) count.textContent = `符合 ${players.length} 人｜目前隊伍 ${team?.members?.length || 0} 人${availableOnly ? `｜僅顯示${dayName}有填時間` : "｜不含本週已達場次上限者"}｜已達本週場次上限者不顯示`;
+            if (count) {
+                const ruleText = team?.tag === "dragonKing"
+                    ? "龍王：7／14 場都可加入，排上後立即從名單隱藏"
+                    : "依成員 7／14 場額度與隊伍連7／連14規則";
+                count.textContent = `符合 ${players.length} 人｜目前隊伍 ${team?.members?.length || 0} 人${availableOnly ? `｜僅顯示${dayName}有填時間` : ""}｜${ruleText}`;
+            }
             if (!list) return;
             if (!players.length) {
                 list.innerHTML = `<div class="p-10 text-center text-sm text-slate-500">沒有符合條件的玩家</div>`;
@@ -1869,17 +1959,17 @@
             
             // ------------------------------------------------------
             // 待排名單顯示規則
-            // 6人頁：依原本的「本週出賽上限」過濾。
-            // 12人頁：除了原本的上限外，只要已排進 12 人隊伍，
-            // 就直接從待排名單隱藏，避免同一玩家重複安排。
-            // 總名單頁：維持顯示全部玩家。
+            // 6人、12人共用同一套成員場次邏輯：
+            // 7場成員可安排 1 次連7場；14場成員可安排 2 次連7場，
+            // 或 1 次連14場。一般隊伍依剩餘額度顯示；龍王則例外，
+            // 只要已排進龍王就從名單隱藏。
             // ------------------------------------------------------
             let displayPool = isMasterView
                 ? state.pool
                 : state.pool.filter(p => !hasReachedWeeklyLimit(p, wData));
 
             if (isTeams2 && !isMasterView) {
-                displayPool = displayPool.filter(p => !isPlayerAssignedTo12Team(p.id, wData));
+                displayPool = displayPool.filter(p => !isPlayerAssignedToDragonKing(p.id, wData));
             }
 
             if (poolJobFilters.length > 0) {
@@ -2018,7 +2108,7 @@
                                 <input type="text" value="${escapeHtml(player.note || '')}" placeholder="備註" onchange="updatePlayerField('${player.id}', 'note', this.value)" class="w-35 rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-400">
                             </div>
                             <div class="flex items-center gap-1 shrink-0 ml-2">
-                                ${!isMasterView ? teams.map((t, tIdx) => `<button onclick="sendToTeam('${player.id}', ${tIdx},${isTeams2})" class="rounded border border-blue-900 bg-blue-950 px-2 py-1 text-xs text-blue-300">+${escapeHtml(t.name)}</button>`).join('') : ''}
+                                ${!isMasterView ? teams.map((t, tIdx) => canPlayerBeAddedToTeam(player, t, wData) ? `<button onclick="sendToTeam('${player.id}', ${tIdx},${isTeams2})" class="rounded border border-blue-900 bg-blue-950 px-2 py-1 text-xs text-blue-300">+${escapeHtml(t.name)}</button>` : '').join('') : ''}
                                 <button onclick="deletePoolPlayer('${player.id}')" class="rounded bg-slate-900 border border-slate-800 px-2 py-1 text-xs text-rose-400">✕</button>
                             </div>
                         </div>
@@ -2073,13 +2163,18 @@
                             
                             if (fromType === "pool" && (toType.startsWith("team_") || toType.startsWith("team2_"))) {
                                 const tIdx = parseInt(toType.replace(/team2?_/, ""), 10);
-                                if (hasReachedWeeklyLimit(p, wData)) { 
-                                    alert("已達本週出賽上限！"); 
-                                    return false; 
+                                const targetTeam = targetGroup.teams[tIdx];
+
+                                if (!canPlayerBeAddedToTeam(p, targetTeam, wData)) {
+                                    alert(targetTeam?.tag === "dragonKing"
+                                        ? "龍王隊伍固定視為 14 場：只有 14 場成員可以加入，且需保留完整 14 場額度。"
+                                        : "此玩家的 7／14 場額度不足以加入這個隊伍。");
+                                    return false;
                                 }
+
                                 const newMember = { ...p };
                                 if (isT2) newMember.note = "";
-                                targetGroup.teams[tIdx].members.splice(newIndex, 0, newMember);
+                                targetTeam.members.splice(newIndex, 0, newMember);
                                 return true;
                             }
                             
@@ -2092,6 +2187,24 @@
                                 
                                 if (idx > -1) {
                                     const [moved] = sTeam.splice(idx, 1);
+                                    const sourceTeamObj = fromGroups[fromIsT2 ? state.activeGroup2 : state.activeGroup]
+                                        .teams[parseInt(fromType.replace(/team2?_/, ""), 10)];
+                                    const targetTeamObj = targetGroup.teams[parseInt(toType.replace(/team2?_/, ""), 10)];
+
+                                    if (!canPlayerBeAddedToTeam(moved, targetTeamObj, wData, sourceTeamObj)) {
+                                        sTeam.splice(idx, 0, moved);
+                                        alert(targetTeamObj?.tag === "dragonKing"
+                                            ? "龍王隊伍固定視為 14 場：只有 14 場成員可以加入，且需保留完整 14 場額度。"
+                                            : "此玩家的 7／14 場額度不足以加入這個隊伍。");
+                                        return false;
+                                    }
+
+                                    if (targetTeamObj.members.some(m => String(m.id) === String(moved.id))) {
+                                        sTeam.splice(idx, 0, moved);
+                                        alert("此玩家已存在於目標隊伍。");
+                                        return false;
+                                    }
+
                                     tTeam.splice(newIndex, 0, moved);
                                     return true;
                                 }
@@ -2355,8 +2468,8 @@
             (wData.groups2 || []).forEach(g => (g.teams || []).forEach(t => totalM2 += (t.members?.length || 0)));
 
             document.getElementById("master-tab-badge").innerText = `${state.pool.length}人`;
-            document.getElementById("teams-tab-badge").innerText = `${totalM}/18`;
-            document.getElementById("teams2-tab-badge").innerText = `${totalM2}/18`;
+            document.getElementById("teams-tab-badge").innerText = `${totalM}人`;
+            document.getElementById("teams2-tab-badge").innerText = `${totalM2}人`;
 
             const curGroup6 = currentGroup(false);
             const curGroup12 = currentGroup(true);

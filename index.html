@@ -186,10 +186,10 @@
                 <span>📋</span> 總名單 <span id="master-tab-badge" class="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-300">0人</span>
             </button>
             <button id="tab-btn-teams" onclick="switchTab('teams')" class="flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold transition-all duration-200">
-                <span>⚔️</span> 6人隊伍分配 <span id="teams-tab-badge" class="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-300">0人</span>
+                <span>⚔️</span> 隊伍分配 <span id="teams-tab-badge" class="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-300">0人</span>
             </button>
             <button id="tab-btn-teams2" onclick="switchTab('teams2')" class="flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold transition-all duration-200">
-                <span>⚔</span> 12人隊伍分配 <span id="teams2-tab-badge" class="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-300">0人</span>
+                <span>⚔️</span> 龍王隊伍分配 <span id="teams2-tab-badge" class="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-300">0人</span>
             </button>
         </div>
 
@@ -331,6 +331,8 @@
         const FIREBASE_PATH = "artale_party_state_v3";
         const STORAGE_KEY = "artale_party_local_v3";
         const MAX_GROUPS = 7;
+        // 週別最多只能往「本週」之後建立／切換 4 週。
+        const MAX_FUTURE_WEEKS = 4;
         const GROUP_NAMES = ["週二", "週三", "週四", "週五", "週六", "週日", "週一"];
         const WEEKDAYS = ["週二", "週三", "週四", "週五", "週六", "週日", "週一"];
         const WEEKDAY_NAMES = ["日", "一", "二", "三", "四", "五", "六"];
@@ -1122,11 +1124,16 @@
 
         function getAvailableWeekKeys() {
             const deleted = new Set((state.deletedWeeks || []).map(String));
-            const set = new Set(Object.keys(state.weeksData || {}).filter(wk => !deleted.has(String(wk))));
-            const base = getTuesdayOfWeek();
-            // 只提供本週與未來兩週的快速建立入口，不再自動加入不存在的「上週」。
-            for (let i = 0; i <= 2; i++) {
-                const d = new Date(base);
+            const baseKey = formatDateKey(getTuesdayOfWeek());
+            // 只保留「本週以前」以及「本週往後最多 4 週」的週別。
+            const set = new Set(Object.keys(state.weeksData || {}).filter(wk => {
+                if (deleted.has(String(wk))) return false;
+                const diff = Math.round((Date.parse(`${wk}T00:00:00`) - Date.parse(`${baseKey}T00:00:00`)) / 86400000);
+                return diff <= MAX_FUTURE_WEEKS * 7;
+            }));
+            // 提供本週～未來 4 週的快速建立入口。
+            for (let i = 0; i <= MAX_FUTURE_WEEKS; i++) {
+                const d = new Date(getTuesdayOfWeek());
                 d.setDate(d.getDate() + i * 7);
                 const key = formatDateKey(d);
                 if (!deleted.has(key)) set.add(key);
@@ -1138,6 +1145,14 @@
             if (!wk) return;
             wk = String(wk);
             if ((state.deletedWeeks || []).map(String).includes(wk)) return;
+
+            // 未來最多只能到本週 + 4 週。
+            const currentWeekKey = formatDateKey(getTuesdayOfWeek());
+            const futureDiffDays = Math.round((Date.parse(`${wk}T00:00:00`) - Date.parse(`${currentWeekKey}T00:00:00`)) / 86400000);
+            if (futureDiffDays > MAX_FUTURE_WEEKS * 7) {
+                alert(`最多只能查看／建立本週後 ${MAX_FUTURE_WEEKS} 週的資料。`);
+                return;
+            }
 
             // 歷史週如果不存在，禁止憑空建立。
             if (!state.weeksData?.[wk] && wk < formatDateKey(getTuesdayOfWeek())) return;
@@ -1182,13 +1197,20 @@
                 return;
             }
 
-            // 下一週維持原本可往未來建立週別的行為，並跳過明確刪除的週。
+            // 下一週最多只能切到「本週 + 4 週」，並跳過明確刪除的週。
+            const currentBaseKey = formatDateKey(getTuesdayOfWeek());
+            const maxFutureKey = getWeekKeyOffset(currentBaseKey, MAX_FUTURE_WEEKS);
             let nextKey = '';
-            for (let offset = 1; offset <= 5200; offset++) {
+            for (let offset = 1; offset <= MAX_FUTURE_WEEKS; offset++) {
                 const candidate = getWeekKeyOffset(currentKey, offset);
+                if (candidate > maxFutureKey) break;
                 if (!deleted.has(candidate)) { nextKey = candidate; break; }
             }
-            if (nextKey) selectWeek(nextKey);
+            if (!nextKey) {
+                alert(`已經到最遠週別：本週後 ${MAX_FUTURE_WEEKS} 週。`);
+                return;
+            }
+            selectWeek(nextKey);
         }
 
         function jumpToCurrentWeek() {
@@ -2478,6 +2500,17 @@
                 previousWeekButton.title = canGoPreviousWeek ? "切換到有資料的上一週" : "上一週沒有資料，無法切換";
                 previousWeekButton.classList.toggle("opacity-40", !canGoPreviousWeek);
                 previousWeekButton.classList.toggle("cursor-not-allowed", !canGoPreviousWeek);
+            }
+
+            // 本週後最多 4 週，到了最遠週別就停用「下一週」。
+            const nextWeekButton = document.querySelector('button[onclick="switchWeekRelative(1)"]');
+            const maxFutureKey = getWeekKeyOffset(formatDateKey(getTuesdayOfWeek()), MAX_FUTURE_WEEKS);
+            const canGoNextWeek = String(state.activeWeek) < maxFutureKey;
+            if (nextWeekButton) {
+                nextWeekButton.disabled = !canGoNextWeek;
+                nextWeekButton.title = canGoNextWeek ? `最多可切換到本週後 ${MAX_FUTURE_WEEKS} 週` : `已達最遠週別（本週後 ${MAX_FUTURE_WEEKS} 週）`;
+                nextWeekButton.classList.toggle("opacity-40", !canGoNextWeek);
+                nextWeekButton.classList.toggle("cursor-not-allowed", !canGoNextWeek);
             }
 
             const wData = currentWeekData();

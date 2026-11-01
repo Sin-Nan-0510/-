@@ -45,27 +45,54 @@
         }
         .master-drag-handle:active { cursor: grabbing; }
 
-        /* 總名單手機版的七天可出席時間。隊伍分配區不使用這個 class。 */
+        /* 僅調整「總名單」手機版：時間欄位使用整列寬度，避免被拖曳把手及刪除按鈕擠窄。 */
         @media (max-width: 640px) {
-            .master-roster-row { align-items: flex-start; }
-            .master-drag-handle { margin-top: 2px; }
+            .master-roster-row { align-items: flex-start; position: relative; }
+            .master-drag-handle { margin-top: 2px; flex: 0 0 28px; }
+            .master-roster-fields {
+                flex: 1 1 calc(100% - 28px);
+                width: calc(100% - 28px);
+                min-width: 0;
+                padding-right: 36px;
+            }
+            .master-row-actions {
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                z-index: 3;
+                margin-left: 0 !important;
+            }
             .master-availability {
                 display: grid;
-                grid-template-columns: repeat(4, minmax(0, 1fr));
-                gap: 6px;
-                flex: 0 0 100%;
-                width: 100%;
-                max-width: 100%;
+                grid-template-columns: repeat(4, minmax(64px, 1fr));
+                gap: 8px;
+                flex: 0 0 calc(100% + 64px);
+                width: calc(100% + 64px);
+                max-width: calc(100% + 64px);
+                margin-left: -28px;
+                padding: 8px;
+                align-items: stretch;
             }
-            .master-availability .availability-day { width: 100%; min-width: 0; }
+            .master-availability .availability-day {
+                width: 100%;
+                min-width: 0;
+                gap: 3px;
+            }
+            .master-availability .availability-day > span {
+                font-size: 12px;
+                line-height: 1.4;
+            }
             .master-availability .availability-select {
                 display: block;
+                box-sizing: border-box;
                 width: 100% !important;
-                min-width: 0;
-                min-height: 40px;
-                padding: 4px 2px;
-                font-size: 12px;
+                min-width: 64px;
+                min-height: 52px;
+                padding: 8px 4px;
+                font-size: 14px !important;
+                line-height: 1.25;
                 text-align: center;
+                touch-action: manipulation;
             }
         }
 
@@ -2159,7 +2186,7 @@
                     html += `
                         <div data-id="${escapeHtml(player.id)}" data-master-player-row="${isMasterView ? "1" : "0"}" class="drag-item flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950 p-2.5 text-sm ${isMasterView ? "master-roster-row" : ""}">
                             ${isMasterView ? `<button type="button" class="master-drag-handle" aria-label="拖曳玩家排序" title="長按拖曳排序">⠿</button>` : ""}
-                            <div class="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
+                            <div class="flex items-center gap-1.5 flex-wrap flex-1 min-w-0 ${isMasterView ? "master-roster-fields" : ""}">
                                 <span class="text-xs text-slate-500">#${idx + 1}</span>
                                 
                                 <input type="text" value="${escapeHtml(getPlayerLevel(player))}" maxlength="3" onchange="updatePlayerField('${player.id}', 'level', this.value)" class="w-8 rounded border border-slate-800 bg-slate-900 px-1 py-0.5 text-center text-xs text-blue-400">
@@ -2193,7 +2220,7 @@
 
                                 <input type="text" value="${escapeHtml(player.note || '')}" placeholder="備註" onchange="updatePlayerField('${player.id}', 'note', this.value)" class="w-35 rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-400">
                             </div>
-                            <div class="flex items-center gap-1 shrink-0 ml-2">
+                            <div class="flex items-center gap-1 shrink-0 ml-2 ${isMasterView ? "master-row-actions" : ""}">
                                 ${!isMasterView ? teams.map((t, tIdx) => canPlayerBeAddedToTeam(player, t, wData) ? `<button onclick="sendToTeam('${player.id}', ${tIdx},${isTeams2})" class="rounded border border-blue-900 bg-blue-950 px-2 py-1 text-xs text-blue-300">+${escapeHtml(t.name)}</button>` : '').join('') : ''}
                                 <button onclick="deletePoolPlayer('${player.id}')" class="rounded bg-slate-900 border border-slate-800 px-2 py-1 text-xs text-rose-400">✕</button>
                             </div>

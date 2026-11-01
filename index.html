@@ -24,14 +24,31 @@
         .drag-item { cursor: grab; }
         .drag-item:active { cursor: grabbing; }
 
-        /* 總名單的七天可出席時間：避免 flex 在窄螢幕把欄位壓扁。 */
-        .master-availability {
-            flex-shrink: 0;
+        /* 僅套用於「總名單」：玩家資料列本身不負責拖曳，必須抓獨立把手。 */
+        .master-roster-row { cursor: default; }
+        .master-drag-handle {
+            display: inline-flex;
+            flex: 0 0 28px;
+            width: 28px;
+            height: 36px;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            background: #1e293b;
+            color: #94a3b8;
+            font-size: 18px;
+            line-height: 1;
+            cursor: grab;
+            user-select: none;
+            -webkit-user-select: none;
         }
-        .master-availability .availability-day {
-            min-width: 0;
-        }
+        .master-drag-handle:active { cursor: grabbing; }
+
+        /* 總名單手機版的七天可出席時間。隊伍分配區不使用這個 class。 */
         @media (max-width: 640px) {
+            .master-roster-row { align-items: flex-start; }
+            .master-drag-handle { margin-top: 2px; }
             .master-availability {
                 display: grid;
                 grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -40,15 +57,18 @@
                 width: 100%;
                 max-width: 100%;
             }
+            .master-availability .availability-day { width: 100%; min-width: 0; }
             .master-availability .availability-select {
-                width: 100%;
+                display: block;
+                width: 100% !important;
                 min-width: 0;
-                min-height: 34px;
-                padding-left: 2px;
-                padding-right: 2px;
+                min-height: 40px;
+                padding: 4px 2px;
                 font-size: 12px;
+                text-align: center;
             }
         }
+
         .sortable-ghost {
             opacity: 0.3;
             background-color: #3b82f6 !important;
@@ -2137,7 +2157,8 @@
             } else {
                 displayPool.forEach((player, idx) => {
                     html += `
-                        <div data-id="${escapeHtml(player.id)}" data-master-player-row="${isMasterView ? "1" : "0"}" class="drag-item flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950 p-2.5 text-sm">
+                        <div data-id="${escapeHtml(player.id)}" data-master-player-row="${isMasterView ? "1" : "0"}" class="drag-item flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950 p-2.5 text-sm ${isMasterView ? "master-roster-row" : ""}">
+                            ${isMasterView ? `<button type="button" class="master-drag-handle" aria-label="拖曳玩家排序" title="長按拖曳排序">⠿</button>` : ""}
                             <div class="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
                                 <span class="text-xs text-slate-500">#${idx + 1}</span>
                                 
@@ -2155,7 +2176,7 @@
                                     ${renderGroupSelectOptions(player.groupId, player.id)}
                                 </select>
 
-                                <div class="master-availability flex items-center gap-1 bg-slate-900/60 p-1 rounded border border-slate-800">${renderAvailabilitySelects(player)}</div>
+                                <div class="${isMasterView ? "master-availability" : ""} flex items-center gap-1 bg-slate-900/60 p-1 rounded border border-slate-800">${renderAvailabilitySelects(player)}</div>
 
                                 <select onchange="updatePlayerField('${player.id}', 'rounds', this.value)" class="rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-200">
                                     <option value="7" ${player.rounds === "7" ? "selected" : ""}>7場</option>
@@ -2195,11 +2216,19 @@
             document.querySelectorAll(".sortable-list").forEach(el => {
                 if (el.closest(".hidden")) return;
                 
+                const isMasterPool = el.id === "pool-list-master";
                 const inst = new Sortable(el, {
                     group: { name: "artale-shared-lists", pull: (to, from) => from.el.dataset.listType === "pool" ? "clone" : true },
                     draggable: ".drag-item",
+                    /* 總名單只能從獨立把手拖曳；手機需長按，滑動頁面不會誤啟動排序。 */
+                    handle: isMasterPool ? ".master-drag-handle" : undefined,
+                    delay: isMasterPool ? 180 : 0,
+                    delayOnTouchOnly: isMasterPool,
+                    touchStartThreshold: isMasterPool ? 8 : 3,
                     animation: 150,
-                    filter: "input, button, select",
+                    filter: isMasterPool
+                        ? "input, select, textarea, label, button:not(.master-drag-handle)"
+                        : "input, button, select",
                     preventOnFilter: false,
                     ghostClass: "sortable-ghost",
                     dragClass: "sortable-drag",

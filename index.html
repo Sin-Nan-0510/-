@@ -35,17 +35,52 @@
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
         }
 
-        /* 手機版：避免名單欄位與時間／標籤控制項超出卡片寬度。 */
+        /* 手機版：卡片盡量使用完整螢幕寬度，欄位自動換行，避免需要手動縮放。 */
         @media (max-width: 640px) {
+            html, body {
+                width: 100%;
+                min-width: 0;
+                overflow-x: hidden;
+            }
+
+            body.min-h-screen {
+                padding-left: 6px !important;
+                padding-right: 6px !important;
+            }
+
+            body > .mx-auto.max-w-7xl {
+                width: 100%;
+                max-width: 100%;
+                min-width: 0;
+            }
+
+            main,
             #master-view-container,
+            #teams-cards-container,
+            #teams-cards-container-2,
             #teams-pool-container,
             #teams-pool-container-2,
             #tab-content-master,
             #tab-content-teams,
             #tab-content-teams2,
             .sortable-list {
+                width: 100%;
                 min-width: 0;
                 max-width: 100%;
+            }
+
+            /* 各主要卡片在手機上貼近螢幕邊緣，騰出更多實際內容寬度。 */
+            #master-view-container > .rounded-xl,
+            #teams-pool-container > .rounded-xl,
+            #teams-pool-container-2 > .rounded-xl,
+            #teams-cards-container > .rounded-xl,
+            #teams-cards-container-2 > .rounded-xl,
+            #tab-content-teams > .rounded-xl,
+            #tab-content-teams2 > .rounded-xl {
+                width: 100%;
+                max-width: 100%;
+                min-width: 0;
+                padding: 12px !important;
             }
 
             .master-player-row {
@@ -70,7 +105,8 @@
 
             .master-availability-grid select {
                 width: 100%;
-                max-width: 64px;
+                max-width: 100%;
+                min-width: 0;
             }
 
             .master-tag-options {
@@ -82,6 +118,29 @@
 
             .master-tag-options label {
                 white-space: nowrap;
+            }
+
+            /* 避免 iPhone Safari 聚焦小字輸入框時自動放大頁面。 */
+            #master-view-container input:not([type="checkbox"]):not([type="radio"]),
+            #master-view-container select,
+            #teams-cards-container input:not([type="checkbox"]):not([type="radio"]),
+            #teams-cards-container select,
+            #teams-cards-container-2 input:not([type="checkbox"]):not([type="radio"]),
+            #teams-cards-container-2 select,
+            #teams-pool-container input:not([type="checkbox"]):not([type="radio"]),
+            #teams-pool-container select,
+            #teams-pool-container-2 input:not([type="checkbox"]):not([type="radio"]),
+            #teams-pool-container-2 select {
+                font-size: 16px !important;
+                max-width: 100%;
+            }
+
+            #roster-picker-modal > div,
+            #image-modal > div {
+                width: 100%;
+                max-width: 100%;
+                min-width: 0;
+                max-height: 94dvh;
             }
         }
         
@@ -2225,8 +2284,9 @@
                     animation: 150,
                     filter: "input, button, select, textarea, label, .no-drag",
                     preventOnFilter: false,
-                    // 手機需長按才會開始拖曳，避免正常上下滑動時誤拖整列。
-                    delay: 1000,
+                    // 手機「總名單」需長按約 2 秒才開始拖曳，降低捲動頁面時誤觸。
+                    // 其他隊伍名單維持原本較短的拖曳等待時間。
+                    delay: el.id === "pool-list-master" ? 2000 : 220,
                     delayOnTouchOnly: true,
                     touchStartThreshold: 10,
                     fallbackTolerance: 8,
